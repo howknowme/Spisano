@@ -10,7 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://howknowme.github.io/subly/"><b>Открыть приложение →</b></a>
+  <a href="https://howknowme.github.io/subly/"><b>Открыть в браузере</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/howknowme/subly/releases/latest/download/subly.apk"><b>Скачать для Android (APK)</b></a>
 </p>
 
 <p align="center">
@@ -64,17 +66,31 @@ Subly показывает **реальную сумму**, предупрежд
 - Нет доступа к банку, почте и SMS.
 - Данные хранятся только в `localStorage` вашего браузера.
 - Интернет нужен только для кнопки «Обновить курсы» (open.er-api.com), и ей можно не пользоваться.
+- Шрифты встроены в приложение: даже Google Fonts не запрашиваются.
 - Нет аналитики, трекеров и рекламы.
 
 Чтобы перенести данные на другое устройство: **Настройки → Скачать копию**, затем **Загрузить из файла** на новом устройстве.
 
 ## Установка на телефон
 
+### Android: приложение (рекомендуется)
+
+1. Скачайте **[subly.apk](https://github.com/howknowme/subly/releases/latest/download/subly.apk)** (все версии в [Releases](https://github.com/howknowme/subly/releases)).
+2. Откройте файл и разрешите установку из этого источника, когда Android спросит.
+3. Нажмите **Установить**.
+
+В приложении для Android:
+- **напоминания приходят по расписанию, даже когда приложение закрыто** (можно выбрать время);
+- резервная копия, таблица и `.ics` сохраняются через меню «Поделиться»: в Файлы, Google Диск, Telegram или сразу в Календарь;
+- работает кнопка «Назад», статус-бар окрашивается под тему, шрифты встроены, интернет не нужен.
+
+Новые версии ставятся поверх старой, данные сохраняются.
+
+### iPhone и любой браузер
+
 Откройте [howknowme.github.io/subly](https://howknowme.github.io/subly/):
 - **iPhone (Safari):** «Поделиться» → «На экран „Домой“».
 - **Android (Chrome):** меню ⋮ → «Установить приложение».
-
-После этого Subly открывается как обычное приложение и работает без интернета.
 
 ## Для разработчиков
 
@@ -94,11 +110,25 @@ css/app.css                 стили, светлая и тёмная темы
 js/core.js                  чистая логика: даты, циклы, валюты, прогноз, .ics, CSV, валидация
 js/i18n.js                  тексты RU/EN, категории, шаблоны сервисов
 js/app.js                   интерфейс, хранение, напоминания, PWA
+js/native.js                возможности Android: уведомления по расписанию, «Поделиться», кнопка «Назад»
 sw.js                       офлайн-кэш
-scripts/build-artifact.mjs  сборка в один HTML-файл
+fonts/                      встроенные шрифты Manrope и Unbounded (OFL)
+android/                    проект Android (Capacitor)
+scripts/                    сборка www/, шрифты, иконки Android, сборка в один HTML
 ```
 
-Сайт выкладывается на GitHub Pages автоматически при пуше в `main` (`.github/workflows/pages.yml`).
+- **Сайт** выкладывается на GitHub Pages при пуше в `main` (`.github/workflows/pages.yml`).
+- **APK** собирается в GitHub Actions и публикуется в Releases (`.github/workflows/android.yml`).
+
+Собрать APK у себя (нужны JDK 21 и Android SDK):
+
+```bash
+npm ci
+npm run android:sync
+cd android && ./gradlew assembleRelease   # android/app/build/outputs/apk/release/app-release.apk
+```
+
+APK подписывается ключом `android/app/subly-sideload.keystore`. Он лежит в репозитории специально, чтобы любая сборка ставилась поверх предыдущей. Для публикации в Google Play задайте свой ключ через переменные `SUBLY_KEYSTORE`, `SUBLY_KEYSTORE_PASSWORD`, `SUBLY_KEY_ALIAS`, `SUBLY_KEY_PASSWORD`.
 
 ## Лицензия
 

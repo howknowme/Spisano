@@ -1,0 +1,15 @@
+{
+  "appId": "io.github.howknowme.subly",
+  "appName": "Subly",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#eef1f6",
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_subly",
+      "iconColor": "#2f46d0"
+    }
+  }
+}

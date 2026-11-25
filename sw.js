@@ -1,6 +1,6 @@
-// Offline cache: app shell is cache-first, fonts are cached on first use.
-const VERSION = 'subly-v2';
-const SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/i18n.js', 'icon.svg', 'manifest.webmanifest', 'icon-192.png'];
+// Offline cache: app shell is cache-first; font files are cached on first use.
+const VERSION = 'subly-v3';
+const SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/i18n.js', 'js/native.js', 'icon.svg', 'manifest.webmanifest', 'icon-192.png', 'fonts/fonts.css'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -15,8 +15,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.hostname === 'open.er-api.com') return; // exchange rates: always live
-  const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if (url.origin !== location.origin && !isFont) return;
+  if (url.origin !== location.origin) return;
   if (req.mode === 'navigate') {
     // network first for the page so updates arrive; fall back to cache offline
     e.respondWith(fetch(req).then((res) => { const copy = res.clone(); caches.open(VERSION).then((c) => c.put('index.html', copy)); return res; })

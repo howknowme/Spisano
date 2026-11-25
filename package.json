@@ -8,12 +8,29 @@
     "start": "python3 -m http.server 8080",
     "test": "node --test tests/core.test.mjs",
     "test:e2e": "node tests/e2e.mjs",
-    "build:artifact": "node scripts/build-artifact.mjs"
+    "build:artifact": "node scripts/build-artifact.mjs",
+    "build": "node scripts/build-www.mjs",
+    "fonts": "node scripts/vendor-fonts.mjs",
+    "android:sync": "npm run build && npx cap sync android"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/howknowme/subly"
   },
-  "homepage": "https://howknowme.github.io/subly/"
+  "homepage": "https://howknowme.github.io/subly/",
+  "dependencies": {
+    "@capacitor/android": "7.6.10",
+    "@capacitor/app": "7.1.2",
+    "@capacitor/core": "7.6.10",
+    "@capacitor/filesystem": "7.1.9",
+    "@capacitor/local-notifications": "7.0.7",
+    "@capacitor/share": "7.0.4",
+    "@capacitor/status-bar": "7.0.6"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.10",
+    "@fontsource/manrope": "5.3.0",
+    "@fontsource/unbounded": "5.3.0"
+  }
 }

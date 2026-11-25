@@ -1,5 +1,6 @@
 import * as C from './core.js';
-import { STRINGS, CATEGORIES, TEMPLATES, plural } from './i18n.js';
+import { STRINGS, CATEGORIES, TEMPLATES } from './i18n.js';
+import * as N from './native.js';
 
 // ---------- storage ----------
 
@@ -29,7 +30,7 @@ function defaultPrefs() {
   const lang = langs.some((l) => l.startsWith('ru') || l.startsWith('uk') || l.startsWith('be') || l.startsWith('kk')) || !langs[0]?.startsWith('en') ? 'ru' : 'en';
   return {
     base: lang === 'ru' ? 'RUB' : 'USD', lang, theme: 'auto', weekStart: 1, remindDays: 1,
-    rates: { ...DEFAULT_RATES }, ratesDate: '', notified: {}, budget: 0,
+    rates: { ...DEFAULT_RATES }, ratesDate: '', notified: {}, budget: 0, remindHour: 10,
   };
 }
 
@@ -198,6 +199,37 @@ function commit({ keepDemo = false } = {}) {
   if (!keepDemo) state.demo = false;
   persist();
   render();
+  scheduleNative();
+}
+
+// Android: hand upcoming reminders to the system so they fire with the app closed.
+let nativeTimer;
+function scheduleNative() {
+  if (!N.isNative()) return;
+  clearTimeout(nativeTimer);
+  nativeTimer = setTimeout(() => {
+    const t = T();
+    const td = today();
+    const hour = Number(state.prefs.remindHour ?? 10);
+    const at = (iso, daysBefore) => { const d = C.parseDate(iso); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysBefore, hour, 0, 0); };
+    const items = [];
+    for (const e of C.upcoming(state.subs, td, 120)) {
+      const sub = subById(e.id);
+      if (e.kind === 'trial') {
+        items.push({ key: `${sub.id}:${e.date}:trial`, at: at(e.date, 1), title: t.trialEnds, body: t.alertTrial(sub.name, fmtDate(e.date)) });
+        continue;
+      }
+      const amount = money(C.share(sub), sub.currency);
+      const days = state.prefs.remindDays;
+      items.push({ key: `${sub.id}:${e.date}:pay`, at: at(e.date, days), title: t.notifTitle,
+        body: `${t.alertPay(sub.name, days === 0 ? t.today : fmtDate(e.date))} · ${amount}` });
+      if (sub.manual && days > 0) {
+        items.push({ key: `${sub.id}:${e.date}:due`, at: at(e.date, 0), title: t.notifTitle, body: `${t.manual.due(sub.name)} · ${amount}` });
+      }
+    }
+    items.sort((a, b) => a.at - b.at);
+    N.syncReminders(items, t.prefs.channelName);
+  }, 400);
 }
 
 // ---------- toast ----------
@@ -219,6 +251,13 @@ function applyTheme() {
   else r.setAttribute('data-theme', state.prefs.theme);
   r.lang = state.prefs.lang;
   document.title = 'Subly';
+  if (N.isNative()) {
+    const bg = getComputedStyle(document.body).backgroundColor;
+    const [rr, gg, bb] = (bg.match(/\d+/g) || [238, 241, 246]).map(Number);
+    const hex = '#' + [rr, gg, bb].map((v) => v.toString(16).padStart(2, '0')).join('');
+    const key = hex + state.prefs.theme;
+    if (key !== ui.statusBarKey) { ui.statusBarKey = key; N.setStatusBar(hex, (rr + gg + bb) / 3 < 128); }
+  }
 }
 
 // ---------- routing ----------
@@ -750,21 +789,24 @@ function viewPrefs() {
       field(tp.week, select('pref-week', p.weekStart, [[1, tp.monday], [0, tp.sunday]], (v) => { p.weekStart = Number(v); commit({ keepDemo: true }); }))));
 
   // reminders
-  const notifState = !('Notification' in window) ? 'unsupported' : Notification.permission;
+  const native = N.isNative();
+  const notifState = native ? (ui.nativeNotif || 'prompt') : !('Notification' in window) ? 'unsupported' : Notification.permission;
   const notifBox = h('div', { class: 'row-wrap' });
   if (notifState === 'granted') notifBox.append(h('span', { class: 'badge badge-ok' }, tp.notifyGranted));
   else if (notifState === 'denied') notifBox.append(h('p', { class: 'hint' }, tp.notifyDenied));
   else if (notifState === 'unsupported') notifBox.append(h('p', { class: 'hint' }, tp.notifyUnsupported));
   else notifBox.append(h('button', { type: 'button', class: 'btn', onclick: async () => {
+    if (native) { ui.nativeNotif = await N.requestNotifications(); scheduleNative(); render(); return; }
     try { await Notification.requestPermission(); } catch { /* ignore */ }
     checkReminders(); render();
   } }, icon('bell'), tp.notifyOn));
 
   const reminders = h('section', { class: 'card' }, h('h2', null, tp.reminders),
     h('div', { class: 'form-grid' },
-      field(tp.remindDays, select('pref-remind', p.remindDays, [0, 1, 2, 3, 5, 7].map((n) => [n, tp.remindDaysOpt(n)]), (v) => { p.remindDays = Number(v); commit({ keepDemo: true }); }))),
-    h('div', { class: 'sub-block' }, h('h3', null, tp.notify), h('p', { class: 'hint' }, tp.notifyHint), notifBox),
-    h('div', { class: 'sub-block' }, h('h3', null, tp.ics), h('p', { class: 'hint' }, tp.icsHint),
+      field(tp.remindDays, select('pref-remind', p.remindDays, [0, 1, 2, 3, 5, 7].map((n) => [n, tp.remindDaysOpt(n)]), (v) => { p.remindDays = Number(v); commit({ keepDemo: true }); })),
+      native ? field(tp.remindHour, select('pref-hour', p.remindHour ?? 10, Array.from({ length: 16 }, (_, i) => i + 7).map((hr) => [hr, `${String(hr).padStart(2, '0')}:00`]), (v) => { p.remindHour = Number(v); commit({ keepDemo: true }); })) : null),
+    h('div', { class: 'sub-block' }, h('h3', null, native ? tp.notifyNativeTitle : tp.notify), h('p', { class: 'hint' }, native ? tp.notifyNativeHint : tp.notifyHint), notifBox),
+    h('div', { class: 'sub-block' }, h('h3', null, tp.ics), h('p', { class: 'hint' }, native ? tp.icsNativeHint : tp.icsHint),
       h('div', { class: 'row-wrap' },
         h('button', { type: 'button', class: 'btn btn-primary', onclick: exportICS }, icon('cal'), tp.ics))));
 
@@ -821,7 +863,10 @@ function viewPrefs() {
       clearBtn));
 
   const about = h('section', { class: 'card' }, h('h2', null, tp.about), h('p', null, tp.aboutText), h('p', { class: 'hint' }, tp.shortcuts),
-    ui.installEvt ? h('div', { class: 'row-wrap' }, h('button', { type: 'button', class: 'btn btn-primary', onclick: install }, icon('down'), tp.install), h('span', { class: 'hint' }, tp.installHint)) : null);
+    ui.installEvt ? h('div', { class: 'row-wrap' }, h('button', { type: 'button', class: 'btn btn-primary', onclick: install }, icon('down'), tp.install), h('span', { class: 'hint' }, tp.installHint)) : null,
+    N.isNative() ? null : h('div', { class: 'row-wrap' },
+      h('a', { class: 'btn', href: 'https://github.com/howknowme/subly/releases/latest/download/subly.apk', target: '_blank', rel: 'noopener' }, icon('down'), tp.android),
+      h('span', { class: 'hint' }, tp.androidHint)));
 
   return h('div', { class: 'stack prefs' }, general, reminders, rates, data, about);
 }
@@ -848,6 +893,10 @@ async function updateRates(btn) {
 // ---------- export / import ----------
 
 function download(name, text, type) {
+  if (N.isNative()) {
+    N.saveFile(name, text, name).catch(() => toast(T().prefs.copyFail));
+    return;
+  }
   try {
     const url = URL.createObjectURL(new Blob([text], { type }));
     const a = h('a', { href: url, download: name, hidden: true });
@@ -1135,6 +1184,7 @@ function remove(sub) {
 // ---------- reminders ----------
 
 async function checkReminders() {
+  if (N.isNative()) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const t = T();
   const td = today();
@@ -1177,7 +1227,7 @@ async function install() {
   render();
 }
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.__SUBLY_NO_SW__) {
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.__SUBLY_NO_SW__ && !N.isNative()) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode unavailable */ });
 }
 
@@ -1214,3 +1264,24 @@ ui.lastDay = today();
 
 route();
 checkReminders();
+
+if (N.isNative()) {
+  document.documentElement.classList.add('is-native');
+  N.notificationState().then(async (st) => {
+    // ask once on first launch; later the button in Preferences asks again
+    if (st === 'prompt' || st === 'prompt-with-rationale') {
+      let asked = false;
+      try { asked = localStorage.getItem('subly:asked-notif') === '1'; localStorage.setItem('subly:asked-notif', '1'); } catch { /* ignore */ }
+      if (!asked) st = await N.requestNotifications();
+    }
+    ui.nativeNotif = st;
+    scheduleNative();
+    if (ui.view === 'prefs') render();
+  });
+  N.onBackButton(() => {
+    if (dialog().open) { dialog().close(); return; }
+    if (ui.view !== 'overview') { go('overview'); return; }
+    N.minimizeApp();
+  });
+  N.onResume(() => { render(); scheduleNative(); });
+}

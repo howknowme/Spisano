@@ -5,14 +5,16 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 const root = new URL('..', import.meta.url);
 const read = (p) => readFile(new URL(p, root), 'utf8');
 
-const [html, css, core, i18n, app] = await Promise.all([
-  read('index.html'), read('css/app.css'), read('js/core.js'), read('js/i18n.js'), read('js/app.js'),
+const [html, css, core, i18n, native, app] = await Promise.all([
+  read('index.html'), read('css/app.css'), read('js/core.js'), read('js/i18n.js'), read('js/native.js'), read('js/app.js'),
 ]);
 
 const body = html.split('<!--APP-START-->')[1].split('<!--APP-END-->')[0];
 const coreNames = [...core.matchAll(/^export (?:function|const) (\w+)/gm)].map((m) => m[1]);
 const coreBundle = `const C = (() => {\n${core.replace(/^export /gm, '')}\nreturn { ${coreNames.join(', ')} };\n})();`;
 const i18nBundle = i18n.replace(/^export /gm, '');
+const nativeNames = [...native.matchAll(/^export (?:async )?function (\w+)/gm)].map((m) => m[1]);
+const nativeBundle = `const N = (() => {\n${native.replace(/^export /gm, '')}\nreturn { ${nativeNames.join(', ')} };\n})();`;
 const appBundle = app.replace(/^import .*$/gm, '');
 const icon = Buffer.from(await read('icon.svg')).toString('base64');
 
@@ -28,6 +30,7 @@ ${body.trim()}
 window.__SUBLY_NO_SW__ = true;
 ${coreBundle}
 ${i18nBundle}
+${nativeBundle}
 ${appBundle}
 </script>
 `;

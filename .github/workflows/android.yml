@@ -1,0 +1,87 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'css/**'
+      - 'js/**'
+      - 'fonts/**'
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 1.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install and test
+        run: |
+          npm ci
+          npm test
+
+      - name: Copy the web app into the Android project
+        run: npm run android:sync
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Build signed APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk ../subly.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subly-${{ env.VERSION_NAME }}
+          path: subly.apk
+
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          ## Как установить
+
+          1. На телефоне скачайте **subly.apk** ниже.
+          2. Откройте файл. Android попросит разрешить установку из этого источника (браузера или «Файлов»): разрешите.
+          3. Нажмите **Установить**.
+
+          Новые версии ставятся поверх старой, подписки сохраняются.
+
+          Перед переустановкой «с нуля» сделайте копию: **Настройки → Скачать копию**.
+          NOTES
+          echo "" >> notes.md
+          echo "Сборка из коммита ${GITHUB_SHA::7}." >> notes.md
+          gh release create "android-v${VERSION_NAME}" subly.apk \
+            --target "$GITHUB_SHA" \
+            --title "Subly для Android ${VERSION_NAME}" \
+            --notes-file notes.md \
+            --latest
