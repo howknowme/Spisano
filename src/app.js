@@ -35,18 +35,26 @@ const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { co
 const sortStudents = (list) => [...list].sort((a, b) => a.name.localeCompare(b.name, 'ro'));
 const DAYS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri'];
 
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2600); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), msg.length > 60 ? 6000 : 2600); }
 function openModal(html, onReady) { $('#modal-box').innerHTML = html; $('#modal').classList.remove('hidden'); onReady && onReady($('#modal-box')); const f = $('#modal-box input, #modal-box select, #modal-box textarea'); f && f.focus(); }
+function ask(msg, fn, okLabel = 'Da, continuă') {
+  openModal(`<h2>Confirmare</h2><p>${esc(msg)}</p><div class="row"><span class="spacer"></span><button class="btn ghost" data-close>Renunță</button><button class="btn danger" id="ask-ok">${esc(okLabel)}</button></div>`,
+    (m) => ($('#ask-ok', m).onclick = () => { closeModal(); fn(); }));
+}
 function closeModal() { $('#modal').classList.add('hidden'); }
 $('#modal').addEventListener('mousedown', (e) => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
+const embedded = (() => { try { return !window.desktop && window.top !== window.self; } catch { return true; } })();
+const EMB_MSG = 'În versiunea online tipărirea și salvarea fișierelor nu sunt disponibile. Folosiți fișierul Catedra.html descărcat pe calculator.';
 function printHTML(html) {
+  if (embedded) return toast(EMB_MSG);
   let p = $('#print'); if (!p) { p = document.createElement('div'); p.id = 'print'; p.className = 'print-area'; document.body.appendChild(p); }
   p.innerHTML = html; window.print();
 }
 async function download(name, content, mime = 'text/plain') {
   if (window.desktop) { if (await window.desktop.exportFile(name, content)) toast('Fișier salvat'); return; }
+  if (embedded) return toast(EMB_MSG);
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type: mime + ';charset=utf-8' })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
 const csv = (rows) => '\ufeff' + rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
@@ -153,11 +161,11 @@ Views.clase = () => {
   $$('[data-edit]').forEach((b) => (b.onclick = () => classForm(cls(b.dataset.edit))));
   $$('[data-add]').forEach((b) => (b.onclick = () => studentsForm(cls(b.dataset.add))));
   $$('[data-del]').forEach((b) => (b.onclick = () => {
-    const c = cls(b.dataset.del); if (!confirm(`Ștergeți clasa ${c.name} împreună cu toate notele și absențele?`)) return;
+    const c = cls(b.dataset.del); ask(`Ștergeți clasa ${c.name} împreună cu toate notele și absențele?`, () => {
     D.classes = D.classes.filter((x) => x.id !== c.id); D.grades = D.grades.filter((x) => x.classId !== c.id); D.absences = D.absences.filter((x) => x.classId !== c.id);
     for (const k in D.timetable) if (D.timetable[k].classId === c.id) delete D.timetable[k];
     save(); Views.clase();
-  }));
+  }); }));
   $$('[data-es]').forEach((b) => (b.onclick = () => {
     const [cid, sid] = b.dataset.es.split('|'); const s = cls(cid).students.find((x) => x.id === sid);
     openModal(`<h2>Editează elevul</h2><label class="f">Nume<input id="sn" value="${esc(s.name)}"></label><label class="f">Observații (CES, scutit etc.)<input id="so" value="${esc(s.note || '')}"></label><div class="row"><span class="spacer"></span><button class="btn ghost" data-close>Renunță</button><button class="btn" id="ok">Salvează</button></div>`,
@@ -165,8 +173,7 @@ Views.clase = () => {
   }));
   $$('[data-ds]').forEach((b) => (b.onclick = () => {
     const [cid, sid] = b.dataset.ds.split('|'); const c = cls(cid); const s = c.students.find((x) => x.id === sid);
-    if (!confirm(`Ștergeți elevul ${s.name}?`)) return;
-    c.students = c.students.filter((x) => x.id !== sid); D.grades = D.grades.filter((x) => x.studentId !== sid); D.absences = D.absences.filter((x) => x.studentId !== sid); save(); Views.clase();
+    ask(`Ștergeți elevul ${s.name}?`, () => { c.students = c.students.filter((x) => x.id !== sid); D.grades = D.grades.filter((x) => x.studentId !== sid); D.absences = D.absences.filter((x) => x.studentId !== sid); save(); Views.clase(); });
   }));
 };
 function classForm(c) {
@@ -327,9 +334,8 @@ Views.planificare = () => {
   $$('[data-e]').forEach((b) => (b.onclick = () => planForm(c, D.plans.find((p) => p.id === b.dataset.e))));
   $$('[data-d]').forEach((b) => (b.onclick = () => { D.plans = D.plans.filter((p) => p.id !== b.dataset.d); save(); Views.planificare(); }));
   $('#gen').onclick = () => {
-    if (plans.length && !confirm('Se vor adăuga 34 de rânduri goale (câte unul pe săptămână). Continuați?')) return;
-    for (let w = 1; w <= 34; w++) D.plans.push({ id: uid(), classId: c.id, week: w, unit: '', comp: '', content: '', hours: c.hours, obs: '' });
-    save(); Views.planificare();
+    const doit = () => { for (let w = 1; w <= 34; w++) D.plans.push({ id: uid(), classId: c.id, week: w, unit: '', comp: '', content: '', hours: c.hours, obs: '' }); save(); Views.planificare(); };
+    plans.length ? ask('Se vor adăuga 34 de rânduri goale (câte unul pe săptămână). Continuați?', doit) : doit();
   };
   $('#prt').onclick = () => printHTML(`<p>Unitatea de învățământ: ${esc(D.settings.school)}<br>Profesor: ${esc(D.settings.teacher)}<br>Disciplina: ${esc(c.subject)} · Clasa: ${esc(c.name)} · ${c.hours} ore/săpt. · An școlar ${esc(D.settings.year)}</p>
     <h1 style="text-align:center">PLANIFICARE CALENDARISTICĂ</h1><table><tr><th>Unitatea de învățare</th><th>Competențe specifice</th><th>Conținuturi</th><th>Nr. ore</th><th>Săptămâna</th><th>Observații</th></tr>
@@ -366,7 +372,7 @@ Views.lectie = () => {
   $$('[data-o]').forEach((b) => (b.onclick = () => lessonEditor(D.lessons.find((l) => l.id === b.dataset.o))));
   $$('[data-c]').forEach((b) => (b.onclick = () => { const l = structuredClone(D.lessons.find((x) => x.id === b.dataset.c)); l.id = uid(); l.date = today(); l.topic += ' (copie)'; D.lessons.push(l); save(); lessonEditor(l); }));
   $$('[data-p]').forEach((b) => (b.onclick = () => printLesson(D.lessons.find((l) => l.id === b.dataset.p))));
-  $$('[data-d]').forEach((b) => (b.onclick = () => { if (confirm('Ștergeți proiectul?')) { D.lessons = D.lessons.filter((l) => l.id !== b.dataset.d); save(); Views.lectie(); } }));
+  $$('[data-d]').forEach((b) => (b.onclick = () => ask('Ștergeți proiectul?', () => { D.lessons = D.lessons.filter((l) => l.id !== b.dataset.d); save(); Views.lectie(); })));
 };
 function lessonEditor(l) {
   const isNew = !l;
@@ -601,15 +607,15 @@ Views.setari = () => {
   <p class="muted">Catedra v1.0 · funcționează complet offline · datele nu părăsesc calculatorul.</p>`);
   $('#sv').onclick = () => { Object.assign(s, { teacher: $('#st').value.trim(), school: $('#ss').value.trim(), year: $('#sy').value.trim(), absLimit: Number($('#sa').value) || 10, periods: Number($('#sp').value) || 7, startTime: $('#sb').value || '08:00', lessonMin: Number($('#sl').value) || 50, breakMin: Number($('#sk').value) || 10 }); save(); toast('Setări salvate'); };
   $('#bk').onclick = () => download(`catedra_backup_${today()}.json`, JSON.stringify(D, null, 1), 'application/json');
-  const restore = (txt) => { try { const d = JSON.parse(txt); if (!d.classes) throw 0; if (!confirm('Datele actuale vor fi înlocuite. Continuați?')) return; D = { ...blank(), ...d, settings: { ...blank().settings, ...d.settings } }; save(); toast('Date restaurate'); go('acasa'); } catch { toast('Fișier invalid'); } };
+  const restore = (txt) => { try { const d = JSON.parse(txt); if (!d.classes) throw 0; ask('Datele actuale vor fi înlocuite. Continuați?', () => { D = { ...blank(), ...d, settings: { ...blank().settings, ...d.settings } }; save(); toast('Date restaurate'); go('acasa'); }); } catch { toast('Fișier invalid'); } };
   $('#rs').onclick = async () => { if (window.desktop) { const t = await window.desktop.importFile(); t && restore(t); } else $('#rf').click(); };
   $('#rf').onchange = (e) => { const f = e.target.files[0]; if (f) f.text().then(restore); };
-  $('#wipe').onclick = () => { if (confirm('Sigur ștergeți TOATE datele? Faceți întâi o copie de rezervă!') && confirm('Confirmați încă o dată ștergerea.')) { D = blank(); save(); go('acasa'); } };
+  $('#wipe').onclick = () => ask('Sigur ștergeți TOATE datele? Acțiunea nu poate fi anulată – faceți întâi o copie de rezervă!', () => { D = blank(); save(); go('acasa'); }, 'Da, șterge tot');
 };
 
 // ---------- Date demonstrative ----------
-window.loadDemo = () => {
-  if ((D.classes.length || D.questions.length) && !confirm('Datele demonstrative se vor adăuga la cele existente. Continuați?')) return;
+window.loadDemo = (force) => {
+  if ((D.classes.length || D.questions.length) && force !== true) return ask('Datele demonstrative se vor adăuga la cele existente. Continuați?', () => loadDemo(true));
   const names = ['Popescu Andrei', 'Ionescu Maria', 'Dumitrescu Elena', 'Stan Alexandru', 'Gheorghe Ioana', 'Rusu Mihai', 'Munteanu Daria', 'Ciobanu Vlad', 'Moldovan Sara', 'Lupu David', 'Constantin Ana', 'Marin Luca', 'Tudor Bianca', 'Florea Matei', 'Radu Carla', 'Ene Tudor', 'Neagu Alessia', 'Barbu Ștefan', 'Sandu Irina', 'Preda Răzvan'];
   const mk = (name, subject, hours, n) => ({ id: uid(), name, subject, hours, students: shuffle(names).slice(0, n).map((x) => ({ id: uid(), name: x })) });
   const a = mk('a V-a A', 'Matematică', 4, 18), b = mk('a VI-a B', 'Matematică', 4, 16), c = mk('a VIII-a A', 'Matematică', 4, 20);

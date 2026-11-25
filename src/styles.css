@@ -5,10 +5,14 @@
   --side: #17323a; --side-ink: #d7e4e2;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #12181c; --panel: #1b2328; --ink: #e6ebee; --muted: #9aa6ad; --line: #2c373d;
+  :root:not([data-theme="light"]) { --bg: #12181c; --panel: #1b2328; --ink: #e6ebee; --muted: #9aa6ad; --line: #2c373d;
     --accent: #5cb8b2; --accent-2: #1e3336; --warn: #fbbf24; --warn-bg: #3a2e12;
-    --bad: #f87171; --bad-bg: #3b1a1a; --good: #4ade80; --good-bg: #163222; --side: #0d1417; }
+    --bad: #f87171; --bad-bg: #3b1a1a; --good: #4ade80; --good-bg: #163222; --side: #0d1417; color-scheme: dark; }
 }
+:root[data-theme="dark"] { --bg: #12181c; --panel: #1b2328; --ink: #e6ebee; --muted: #9aa6ad; --line: #2c373d;
+    --accent: #5cb8b2; --accent-2: #1e3336; --warn: #fbbf24; --warn-bg: #3a2e12;
+    --bad: #f87171; --bad-bg: #3b1a1a; --good: #4ade80; --good-bg: #163222; --side: #0d1417; color-scheme: dark; }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; background: var(--bg); color: var(--ink); display: flex; font-size: 14px; }
@@ -78,6 +82,18 @@ tr:hover td { background: var(--accent-2); }
 .groups div { background: var(--accent-2); border-radius: 10px; padding: 12px; }
 .stage { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
 .print-area { display: none; }
+@media (max-width: 760px) {
+  body { flex-direction: column; height: auto; min-height: 100%; }
+  .sidebar { width: 100%; padding: 10px max(16px, env(safe-area-inset-left, 0px)); }
+  .brand { padding: 0 0 8px; }
+  nav { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 6px; }
+  nav button { width: auto; white-space: nowrap; margin: 0; }
+  .sem-switch { margin-top: 4px; padding: 4px 0; }
+  main { overflow: visible; padding: 18px max(16px, env(safe-area-inset-right, 0px)) 60px max(16px, env(safe-area-inset-left, 0px)); }
+  .card { overflow-x: auto; }
+  .big-name { font-size: 34px; }
+  .timer { font-size: 56px; }
+}
 @media print {
   body { display: block; background: #fff; color: #000; font-size: 12pt; }
   .sidebar, main, .modal, .toast, .no-print { display: none !important; }

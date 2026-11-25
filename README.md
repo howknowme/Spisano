@@ -20,7 +20,12 @@ Profesorii petrec ore întregi pe hârtii: catalog, calculul mediilor, absențe,
 | 🎲 **La clasă** | Elev aleatoriu (fără repetare), cronometru, împărțire pe grupe |
 | ⚙️ **Setări** | Profil, durata orelor, copie de rezervă / restaurare (JSON) |
 
-## Pornire
+## Cel mai simplu mod (fără instalare)
+Descărcați fișierul **`Catedra.html`** (74 KB) și deschideți-l cu dublu clic în Chrome, Edge sau Firefox. Funcționează offline; datele se salvează în browserul de pe acel calculator – faceți periodic copie de rezervă din „Setări”.
+
+Fișierul se regenerează cu `node scripts/build-single.js`.
+
+## Pornire (aplicația desktop)
 ```bash
 npm install
 npm start
@@ -34,4 +39,3 @@ npm run dist:linux  # Linux (.AppImage)
 ```
 Sau din GitHub: **Actions → Build Catedra → Run workflow**, apoi descărcați fișierul din „Artifacts”.
 
-Aplicația se poate deschide și direct în browser: `src/index.html` (datele se salvează atunci în browser).
