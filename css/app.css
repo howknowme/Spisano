@@ -490,3 +490,7 @@ textarea.input { resize: vertical; min-height: 64px; }
 }
 .h-mark:hover { border-color: var(--ok); color: var(--ok); }
 .h-mark.is-paid { border-style: solid; border-color: transparent; background: color-mix(in oklab, var(--ok) 16%, var(--surface)); color: var(--ok); }
+@media (max-width: 560px) {
+  .alert-bill .alert-text { flex-basis: calc(100% - 30px); }
+  .alert-bill strong { margin-left: 28px; margin-right: auto; }
+}
