@@ -98,3 +98,30 @@ test('sanitizeSub rejects junk and clamps values', () => {
 test('csv escapes', () => {
   assert.equal(C.toCSV([['a;b', 'c"d']]), '﻿"a;b";"c""d"');
 });
+
+test('pastPayments stops at endedAt and skips trial', () => {
+  const sb = sub({ start: '2026-01-10', trialEnd: '2026-02-15', status: 'cancelled', endedAt: '2026-05-01' });
+  assert.deepEqual(C.pastPayments(sb, '2026-11-25'), ['2026-03-10', '2026-04-10']);
+  assert.equal(C.paidSoFar(sb, '2026-11-25'), 200);
+});
+
+test('lifetime totals in base currency', () => {
+  const l = C.lifetime([sub({ start: '2026-10-01', price: 10, currency: 'USD' }), sub({ id: 'y', start: '2027-01-01' })], 'RUB', { USD: 1, RUB: 0.0125 }, '2026-11-25');
+  assert.equal(l.total, 1600);
+  assert.equal(l.rows.length, 1);
+});
+
+test('unpaid lists due and overdue manual bills', () => {
+  const sb = sub({ manual: true, start: '2026-09-25', paid: ['2026-09-25'] });
+  assert.deepEqual(C.unpaid([sb], '2026-11-25').map((e) => e.kind + e.date), ['overdue2026-10-25', 'due2026-11-25']);
+  assert.deepEqual(C.unpaid([{ ...sb, manual: false }], '2026-11-25'), []);
+});
+
+test('togglePaid and withStatus', () => {
+  assert.deepEqual(C.togglePaid({ paid: ['2026-01-01'] }, '2026-02-01'), ['2026-01-01', '2026-02-01']);
+  assert.deepEqual(C.togglePaid({ paid: ['2026-01-01'] }, '2026-01-01'), []);
+  const p = C.withStatus(sub(), 'paused', '2026-11-25');
+  assert.equal(p.endedAt, '2026-11-25');
+  assert.equal(C.withStatus(p, 'active', '2026-12-01').endedAt, '');
+  assert.equal(C.withStatus(p, 'cancelled', '2026-12-01').endedAt, '2026-11-25');
+});

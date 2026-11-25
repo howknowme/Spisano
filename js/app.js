@@ -29,7 +29,7 @@ function defaultPrefs() {
   const lang = langs.some((l) => l.startsWith('ru') || l.startsWith('uk') || l.startsWith('be') || l.startsWith('kk')) || !langs[0]?.startsWith('en') ? 'ru' : 'en';
   return {
     base: lang === 'ru' ? 'RUB' : 'USD', lang, theme: 'auto', weekStart: 1, remindDays: 1,
-    rates: { ...DEFAULT_RATES }, ratesDate: '', notified: {},
+    rates: { ...DEFAULT_RATES }, ratesDate: '', notified: {}, budget: 0,
   };
 }
 
@@ -71,8 +71,9 @@ function demoSubs() {
     mk({ name: 'Okko', price: 399, currency: 'RUB', category: 'video', start: d(-10), trialEnd: d(3), notes: 'Пробный месяц по промокоду' }),
     mk({ name: 'Фитнес-клуб', price: 3500, currency: 'RUB', category: 'health', start: d(14), method: 'Наличные' }),
     mk({ name: 'Мобильная связь', price: 650, currency: 'RUB', category: 'home', start: d(1) }),
+    mk({ name: 'Коммунальные услуги', price: 5200, currency: 'RUB', category: 'home', start: d(-3), manual: true, paid: [d(-33)], notes: 'Оплачиваю в приложении банка' }),
     mk({ name: 'Домашний интернет', price: 700, currency: 'RUB', category: 'home', start: d(18) }),
-    mk({ name: 'Xbox Game Pass', price: 16.99, currency: 'USD', category: 'games', start: d(-30), status: 'paused' }),
+    mk({ name: 'Xbox Game Pass', price: 16.99, currency: 'USD', category: 'games', start: d(-30), status: 'paused', endedAt: d(-2) }),
     mk({ name: 'Литрес', price: 399, currency: 'RUB', category: 'learning', start: d(22), toCancel: true }),
   ];
 }
@@ -204,7 +205,7 @@ function commit({ keepDemo = false } = {}) {
 let toastTimer;
 function toast(msg, action) {
   const box = $('#toast');
-  box.replaceChildren(h('span', null, msg), action ? h('button', { class: 'btn btn-text', type: 'button', onclick: () => { action.fn(); box.hidden = true; } }, action.label) : null);
+  box.replaceChildren(h('span', null, msg), action ? h('button', { class: 'btn btn-text', type: 'button', onclick: () => { action.fn(); box.hidden = true; } }, action.label) : '');
   box.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { box.hidden = true; }, action ? 6000 : 2600);
@@ -292,7 +293,8 @@ function viewOverview() {
     h('div', { class: 'hero-main' },
       h('p', { class: 'eyebrow' }, t.activeCount(tot.count)),
       h('p', { class: 'hero-num' }, money(tot.month)),
-      h('p', { class: 'hero-sub' }, t.perMonth)),
+      h('p', { class: 'hero-sub' }, t.perMonth),
+      budgetMeter(tot.month)),
     h('dl', { class: 'hero-facts' },
       h('div', null, h('dt', null, t.perYear), h('dd', null, money(tot.year))),
       h('div', null, h('dt', null, t.perDay), h('dd', null, money(tot.day))),
@@ -304,8 +306,23 @@ function viewOverview() {
     const n = C.diffDays(C.parseDate(td), C.parseDate(e.date));
     return e.kind === 'trial' ? n <= 3 : n <= remindDays;
   });
-  if (alerts.length) {
+  const bills = C.unpaid(state.subs, td);
+  const budget = Number(state.prefs.budget) || 0;
+  if (alerts.length || bills.length || (budget > 0 && tot.month > budget)) {
     wrap.append(h('section', { class: 'alerts', 'aria-label': t.prefs.reminders },
+      budget > 0 && tot.month > budget
+        ? h('button', { type: 'button', class: 'alert alert-over', onclick: () => { ui.sort = 'price'; ui.status = 'active'; ui.cat = 'all'; saveUI(); go('subs'); } },
+          icon('spark'), h('span', null, t.budget.over(money(tot.month - budget))))
+        : null,
+      bills.map((e) => {
+        const sub = subById(e.id);
+        return h('div', { class: 'alert alert-bill' + (e.kind === 'overdue' ? ' is-overdue' : '') },
+          icon('clock'),
+          h('button', { type: 'button', class: 'alert-text', onclick: () => openForm(sub) },
+            e.kind === 'due' ? t.manual.due(sub.name) : t.manual.overdue(sub.name, fmtDate(e.date))),
+          h('strong', { class: 'num' }, money(C.share(sub), sub.currency)),
+          h('button', { type: 'button', class: 'btn btn-small', onclick: () => markPaid(sub, e.date) }, t.manual.markPaid));
+      }),
       alerts.map((e) => {
         const sub = subById(e.id);
         const when = relDay(e.date);
@@ -317,9 +334,49 @@ function viewOverview() {
   }
 
   wrap.append(h('div', { class: 'grid-2' },
-    h('div', { class: 'stack' }, upcomingCard(), topCard()),
+    h('div', { class: 'stack' }, upcomingCard(), topCard(), lifetimeCard()),
     h('div', { class: 'stack' }, forecastCard(), categoryCard())));
   return wrap;
+}
+
+function budgetMeter(month) {
+  const t = T();
+  const budget = Number(state.prefs.budget) || 0;
+  if (!(budget > 0)) {
+    return h('a', { class: 'hero-budget-set', href: '#prefs', onclick: () => setTimeout(() => $('#pref-budget')?.focus(), 50) }, '+ ' + t.budget.set);
+  }
+  const pct = Math.round((month / budget) * 100);
+  const over = month > budget;
+  return h('div', { class: 'hero-budget' + (over ? ' is-over' : '') },
+    h('div', { class: 'hb-track', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.min(pct, 100), 'aria-label': t.budget.of(pct, money(budget)) },
+      h('span', { class: 'hb-fill', style: { width: Math.min(100, pct) + '%' } })),
+    h('p', { class: 'hb-label' }, t.budget.of(pct, money(budget)), over ? '' : ` · ${t.budget.left(money(budget - month))}`));
+}
+
+function markPaid(sub, date) {
+  const t = T();
+  sub.paid = C.togglePaid(sub, date);
+  commit();
+  toast(t.manual.marked(sub.name), { label: t.undo, fn: () => { sub.paid = C.togglePaid(sub, date); commit(); } });
+}
+
+function lifetimeCard() {
+  const t = T();
+  const { base, rates } = state.prefs;
+  const l = C.lifetime(state.subs, base, rates, today());
+  const card = h('section', { class: 'card' }, h('header', { class: 'card-head' },
+    h('div', null, h('h2', null, t.lifetime.title), h('p', { class: 'card-hint' }, t.lifetime.hint)),
+    h('span', { class: 'card-meta num' }, money(l.total))));
+  if (!l.rows.length) { card.append(h('p', { class: 'muted' }, t.lifetime.empty)); return card; }
+  card.append(h('ol', { class: 'rank' }, l.rows.slice(0, 5).map((r) => {
+    const sub = subById(r.id);
+    return h('li', null, h('button', { type: 'button', class: 'rank-btn', onclick: () => openForm(sub) },
+      avatar(sub, 32),
+      h('span', { class: 'rank-body' }, h('span', { class: 'rank-name' }, sub.name),
+        h('span', { class: 'rank-meta' }, `${t.lifetime.count(r.count)} · ${t.lifetime.since(fmtDate(r.since, { year: true }))}`)),
+      h('span', { class: 'rank-val num' }, money(r.value))));
+  })));
+  return card;
 }
 
 function emptyState() {
@@ -353,6 +410,7 @@ function upcomingCard() {
         h('span', { class: 'tl-date' }, h('span', { class: 'tl-day num' }, String(C.parseDate(e.date).getDate())), h('span', { class: 'tl-mon' }, monthName(e.date.slice(0, 7), 'short'))),
         avatar(sub, 32),
         h('span', { class: 'tl-body' }, h('span', { class: 'tl-name' }, sub.name), h('span', { class: 'tl-when' }, e.kind === 'trial' ? `${t.trialEnds} · ${relDay(e.date)}` : relDay(e.date))),
+        sub.manual && e.kind === 'pay' ? h('span', { class: 'badge' }, t.manual.badge) : null,
         e.kind === 'pay'
           ? h('span', { class: 'tl-amt num' }, money(C.share(sub), sub.currency))
           : h('span', { class: 'badge badge-trial' }, t.trialBadge))));
@@ -429,7 +487,7 @@ function forecastCard() {
       const show = () => {
         tip.replaceChildren(h('strong', { class: 'num' }, money(b.total)), h('span', null, monthName(b.key)),
           ...b.items.slice(0, 5).map((it) => h('span', { class: 'tip-row' }, h('i', { style: { background: subColorVar(subById(it.id)) } }), `${subById(it.id).name} · ${C.parseDate(it.date).getDate()}`)),
-          b.items.length > 5 ? h('span', { class: 'tip-row muted' }, `+${b.items.length - 5}`) : null);
+          b.items.length > 5 ? h('span', { class: 'tip-row muted' }, `+${b.items.length - 5}`) : '');
         tip.hidden = false;
         const left = Math.min(Math.max(cx - 90, 0), W - 180);
         tip.style.left = left + 'px';
@@ -561,6 +619,7 @@ function subRow(sub, next, m) {
   if (sub.status === 'paused') badges.push(h('span', { class: 'badge badge-paused' }, t.pausedBadge));
   if (sub.status === 'cancelled') badges.push(h('span', { class: 'badge badge-off' }, t.cancelledBadge));
   if (sub.toCancel && sub.status === 'active') badges.push(h('span', { class: 'badge badge-cancel' }, t.toCancelBadge));
+  if (sub.manual) badges.push(h('span', { class: 'badge' }, t.manual.badge));
   if (sub.shared > 1) badges.push(h('span', { class: 'badge' }, t.sharedBadge(sub.shared)));
 
   const quick = sub.status === 'active'
@@ -583,12 +642,12 @@ function subRow(sub, next, m) {
 }
 
 function setStatus(sub, status) {
-  const prev = sub.status;
-  sub.status = status;
+  const prev = { status: sub.status, endedAt: sub.endedAt };
+  Object.assign(sub, C.withStatus(sub, status, today()));
   commit();
   const t = T();
   const label = { paused: t.pausedBadge, active: t.statusActive, cancelled: t.cancelledBadge }[status];
-  toast(`${sub.name}: ${label.toLowerCase()}`, { label: t.undo, fn: () => { sub.status = prev; commit(); } });
+  toast(`${sub.name}: ${label.toLowerCase()}`, { label: t.undo, fn: () => { Object.assign(sub, prev); commit(); } });
 }
 
 // ---------- view: calendar ----------
@@ -685,6 +744,9 @@ function viewPrefs() {
       field(tp.baseCurrency, select('pref-base', p.base, currencies.map((c) => [c, c]), (v) => { p.base = v; commit({ keepDemo: true }); }), tp.baseCurrencyHint),
       field(tp.language, select('pref-lang', p.lang, [['ru', 'Русский'], ['en', 'English']], (v) => { p.lang = v; commit({ keepDemo: true }); })),
       field(tp.theme, select('pref-theme', p.theme, [['auto', tp.themeAuto], ['light', tp.themeLight], ['dark', tp.themeDark]], (v) => { p.theme = v; commit({ keepDemo: true }); })),
+      field(t.budget.title, h('input', { id: 'pref-budget', class: 'input input-num num', type: 'number', inputmode: 'decimal', min: '0', step: '100', placeholder: '—',
+        value: p.budget > 0 ? String(p.budget) : '',
+        onchange: (e) => { const v = Number(e.target.value); p.budget = v > 0 ? v : 0; commit({ keepDemo: true }); } }), `${t.budget.hint} (${p.base})`),
       field(tp.week, select('pref-week', p.weekStart, [[1, tp.monday], [0, tp.sunday]], (v) => { p.weekStart = Number(v); commit({ keepDemo: true }); }))));
 
   // reminders
@@ -837,6 +899,7 @@ function importJSON(text) {
       if (['auto', 'light', 'dark'].includes(pr.theme)) next.theme = pr.theme;
       if ([0, 1].includes(pr.weekStart)) next.weekStart = pr.weekStart;
       if (Number.isInteger(pr.remindDays) && pr.remindDays >= 0 && pr.remindDays <= 30) next.remindDays = pr.remindDays;
+      if (Number(pr.budget) >= 0) next.budget = Number(pr.budget) || 0;
       if (pr.rates && typeof pr.rates === 'object') {
         for (const [k, v] of Object.entries(pr.rates)) if (/^[A-Z]{3}$/.test(k) && Number(v) > 0) next.rates[k] = Number(v);
       }
@@ -903,6 +966,9 @@ function openForm(sub, preset) {
   const statusSel = (el.status = h('select', { id: 'f-status', class: 'input input-select' },
     [['active', t.statusActive], ['paused', t.pausedBadge], ['cancelled', t.cancelledBadge]].map(([v, l]) => h('option', { value: v, selected: v === draft.status }, l))));
   const toCancel = (el.toCancel = h('input', { id: 'f-toCancel', type: 'checkbox', checked: !!draft.toCancel }));
+  const manual = (el.manual = h('input', { id: 'f-manual', type: 'checkbox', checked: !!draft.manual }));
+  let paidMarks = [...(draft.paid || [])];
+  const historyBox = h('div', { class: 'history' });
 
   const swatches = ['', '#2f6fdb', '#e0612b', '#0b9d7e', '#d39200', '#d6487f', '#16872a', '#6a4ce2', '#d83a3b', '#5d6678'];
   let color = draft.color || '';
@@ -922,7 +988,7 @@ function openForm(sub, preset) {
       currency: el.currency.value, unit: el.unit.value, every: Math.max(1, Math.floor(Number(el.every.value) || 1)),
       start: el.start.value, category: el.category.value, trialEnd: el.trialEnd.value, shared: Number(el.shared.value),
       method: el.method.value.trim(), url: el.url.value.trim(), notes: el.notes.value.trim(), status: el.status.value,
-      toCancel: el.toCancel.checked, color,
+      toCancel: el.toCancel.checked, manual: el.manual.checked, paid: paidMarks, color,
     };
   }
 
@@ -941,6 +1007,26 @@ function openForm(sub, preset) {
     ];
     if (!isNew) facts.push(h('div', null, h('dt', null, tf.paidSoFar), h('dd', { class: 'num' }, money(C.paidSoFar(d, today()), d.currency))));
     previewBox.replaceChildren(ava, h('dl', { class: 'preview-facts' }, facts));
+    renderHistory(d);
+  }
+
+  function renderHistory(d) {
+    if (isNew) return;
+    const th = t.history;
+    const past = C.pastPayments(d, today()).reverse();
+    const shown = past.slice(0, 8);
+    const paid = new Set(paidMarks);
+    historyBox.replaceChildren(
+      h('h3', null, th.title),
+      shown.length ? h('ul', { class: 'history-list' }, shown.map((date) => h('li', null,
+        h('span', { class: 'h-date' }, fmtDate(date, { year: true })),
+        h('span', { class: 'h-amt num' }, money(C.share(d), d.currency)),
+        d.manual
+          ? h('button', { type: 'button', class: 'h-mark' + (paid.has(date) ? ' is-paid' : ''), 'aria-pressed': String(paid.has(date)), title: th.toggle,
+            onclick: () => { paidMarks = C.togglePaid({ paid: paidMarks }, date); renderHistory(readDraft()); } }, paid.has(date) ? '✓ ' + th.paid : th.notPaid)
+          : h('span', { class: 'h-state' }, th.charged))))
+        : h('p', { class: 'hint' }, th.empty),
+      past.length > shown.length ? h('p', { class: 'hint' }, th.more(past.length - shown.length)) : '');
   }
 
   function applyTemplate(tp) {
@@ -981,6 +1067,7 @@ function openForm(sub, preset) {
         fieldWrap('start', tf.start, start, tf.startHint),
         fieldWrap('category', tf.category, category)),
       h('label', { class: 'check' }, toCancel, h('span', null, h('strong', null, tf.toCancel), h('span', { class: 'hint' }, ' ' + tf.toCancelHint))),
+      h('label', { class: 'check' }, manual, h('span', null, h('strong', null, t.manual.label), h('span', { class: 'hint' }, ' ' + t.manual.hint))),
       h('details', { class: 'more', open: !isNew && (draft.trialEnd || draft.shared > 1 || draft.method || draft.url || draft.notes || draft.status !== 'active') ? true : null },
         h('summary', null, tf.more),
         h('div', { class: 'more-body' },
@@ -992,7 +1079,8 @@ function openForm(sub, preset) {
             fieldWrap('status', tf.status, statusSel)),
           fieldWrap('url', tf.url, url),
           fieldWrap('notes', tf.notes, notes),
-          h('div', { class: 'field' }, h('span', { class: 'label' }, tf.color), colorRow)))),
+          h('div', { class: 'field' }, h('span', { class: 'label' }, tf.color), colorRow))),
+      isNew ? null : historyBox),
     h('footer', { class: 'sheet-foot' },
       !isNew ? h('button', { type: 'button', class: 'btn btn-ghost btn-danger-text', onclick: () => remove(sub) }, icon('trash'), tf.delete) : null,
       !isNew ? h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => { dialog().close(); openForm(null, { ...sub, id: uid(), name: sub.name + ' 2' }); } }, icon('copy'), h('span', { class: 'hide-sm' }, tf.duplicate)) : null,
@@ -1016,7 +1104,8 @@ function openForm(sub, preset) {
     showErr('start', d.start ? '' : tf.errStart); if (!d.start) bad = bad || 'start';
     if (bad) { el[bad].focus(); return; }
     if (d.url && !/^https?:\/\//i.test(d.url)) d.url = 'https://' + d.url;
-    const clean = C.sanitizeSub(d, uid);
+    const withEnd = sub ? C.withStatus({ ...d, status: sub.status, endedAt: sub.endedAt }, d.status, today()) : d;
+    const clean = C.sanitizeSub(withEnd, uid);
     if (!clean) return;
     const i = state.subs.findIndex((x) => x.id === clean.id);
     if (i >= 0) state.subs[i] = clean; else state.subs.push(clean);

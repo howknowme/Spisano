@@ -194,12 +194,69 @@ export function byCategory(subs, base, rates, today) {
   return [...map.entries()].map(([category, value]) => ({ category, value })).sort((a, b) => b.value - a.value);
 }
 
-/** Total paid so far since start (approximate: counts occurrences up to today). */
+/** Last day that still counts as paid: today, or the day a paused/cancelled sub stopped. */
+function lastCountedDay(sub, today) {
+  if (sub.status !== 'active' && sub.endedAt && sub.endedAt < today) return sub.endedAt;
+  return today;
+}
+
+/** Past charge dates (oldest first), skipping the trial; stops at pause/cancel. */
+export function pastPayments(sub, today, limit = 100000) {
+  if (sub.start > today) return [];
+  const end = lastCountedDay(sub, today);
+  return occurrencesBetween(sub, sub.start, end, limit)
+    .filter((d) => !(sub.trialEnd && d <= sub.trialEnd));
+}
+
+/** Your share paid since the first charge, in the subscription's currency (approximate). */
 export function paidSoFar(sub, today) {
-  if (sub.start > today) return 0;
-  const n = occurrencesBetween({ ...sub }, sub.start, today, 100000)
-    .filter((d) => !(sub.trialEnd && d <= sub.trialEnd)).length;
-  return n * share(sub);
+  return pastPayments(sub, today).length * share(sub);
+}
+
+/** Lifetime spend across all subscriptions in the base currency, plus per-subscription rows. */
+export function lifetime(subs, base, rates, today) {
+  const rows = subs.map((sub) => {
+    const n = pastPayments(sub, today).length;
+    return { id: sub.id, count: n, value: convert(n * share(sub), sub.currency, base, rates), since: sub.start };
+  }).filter((r) => r.count > 0).sort((a, b) => b.value - a.value);
+  return { total: rows.reduce((a, r) => a + r.value, 0), rows };
+}
+
+/**
+ * Manual bills (rent, utilities) that are due today or overdue and not marked paid.
+ * Looks back `lookback` days so old history does not flood the list.
+ */
+export function unpaid(subs, today, lookback = 62) {
+  const t = parseDate(today);
+  const from = fmtISO(new Date(t.getFullYear(), t.getMonth(), t.getDate() - lookback));
+  const out = [];
+  for (const sub of subs) {
+    if (!sub.manual || sub.status !== 'active') continue;
+    const paid = new Set(sub.paid || []);
+    const begin = sub.start > from ? sub.start : from;
+    if (begin > today) continue;
+    for (const d of occurrencesBetween(sub, begin, today, 400)) {
+      if (sub.trialEnd && d <= sub.trialEnd) continue;
+      if (!paid.has(d)) out.push({ id: sub.id, date: d, kind: d === today ? 'due' : 'overdue' });
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Toggle a paid mark on a manual bill; keeps the newest 120 marks. */
+export function togglePaid(sub, date) {
+  const set = new Set(sub.paid || []);
+  if (set.has(date)) set.delete(date); else set.add(date);
+  return [...set].sort().slice(-120);
+}
+
+/** Status change bookkeeping: remember when a subscription stopped costing money. */
+export function withStatus(sub, status, today) {
+  if (status === sub.status) return { ...sub };
+  const next = { ...sub, status };
+  if (status === 'active') next.endedAt = '';
+  else if (sub.status === 'active') next.endedAt = today;
+  return next;
 }
 
 // ---------- iCalendar export ----------
@@ -303,6 +360,9 @@ export function sanitizeSub(raw, uid) {
     url,
     color: /^#[0-9a-f]{6}$/i.test(raw.color) ? raw.color : '',
     toCancel: !!raw.toCancel,
+    manual: !!raw.manual,
+    paid: Array.isArray(raw.paid) ? [...new Set(raw.paid.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-120) : [],
+    endedAt: /^\d{4}-\d{2}-\d{2}$/.test(raw.endedAt) ? raw.endedAt : '',
     shared: Math.min(20, Math.max(1, Math.floor(Number(raw.shared) || 1))),
     created: typeof raw.created === 'string' ? raw.created : todayISO(),
   };

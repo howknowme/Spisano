@@ -34,7 +34,33 @@ try {
   await page.waitForSelector('.hero');
   assert.match(await page.textContent('.brand-tag'), /Подписки/);
 
-  // start clean
+  // demo has an unpaid manual bill → mark it paid, then undo
+  const bills = await page.locator('.alert-bill').count();
+  assert.ok(bills >= 1, 'demo shows an unpaid bill');
+  await page.locator('.alert-bill .btn').first().click();
+  assert.equal(await page.locator('.alert-bill').count(), bills - 1);
+  await page.click('#toast >> text=Отменить');
+  assert.equal(await page.locator('.alert-bill').count(), bills);
+
+  // lifetime card and history
+  await page.waitForSelector('text=За всё время');
+  await page.locator('.alert-bill .alert-text').first().click();
+  await page.waitForSelector('.history-list .h-mark');
+  await page.locator('.history-list .h-mark').first().click();
+  assert.equal(await page.locator('.history-list .h-mark.is-paid').count() >= 1, true);
+  await page.click('button[type=submit]');
+
+  // budget: tiny budget → over-budget alert
+  await page.goto(base + '#prefs');
+  await page.fill('#pref-budget', '100');
+  await page.press('#pref-budget', 'Tab');
+  await page.goto(base + '#overview');
+  await page.waitForSelector('.alert-over');
+  assert.match(await page.textContent('.hb-label'), /%/);
+
+  // start clean: editing demo data keeps it, so reset storage to get the banner back
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
   await page.click('text=Очистить и начать');
   await page.waitForSelector('.empty');
 
