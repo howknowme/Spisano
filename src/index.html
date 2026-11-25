@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Catedra</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<aside class="sidebar no-print">
+  <div class="brand"><span class="logo">C</span><div><strong>Catedra</strong><small>asistentul profesorului</small></div></div>
+  <nav id="nav">
+    <button data-view="acasa">🏠 Acasă</button>
+    <button data-view="clase">👥 Clase și elevi</button>
+    <button data-view="catalog">📒 Catalog și medii</button>
+    <button data-view="absente">🗓️ Absențe</button>
+    <button data-view="orar">⏰ Orar</button>
+    <button data-view="planificare">📅 Planificare</button>
+    <button data-view="lectie">📝 Proiect de lecție</button>
+    <button data-view="teste">🧪 Generator teste</button>
+    <button data-view="rapoarte">📊 Rapoarte părinți</button>
+    <button data-view="clasa">🎲 La clasă</button>
+    <button data-view="setari">⚙️ Setări și backup</button>
+  </nav>
+  <div class="sem-switch">
+    <label>Semestrul curent</label>
+    <div class="seg"><button data-sem="1">Sem. I</button><button data-sem="2">Sem. II</button></div>
+  </div>
+</aside>
+<main id="view"></main>
+<div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

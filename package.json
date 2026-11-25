@@ -1,0 +1,28 @@
+{
+  "name": "catedra",
+  "productName": "Catedra",
+  "version": "1.0.0",
+  "description": "Catedra – asistentul digital al profesorului (catalog, medii, absențe, orar, planificare, proiecte de lecție, teste).",
+  "main": "main.js",
+  "author": "Catedra",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "ro.catedra.app",
+    "productName": "Catedra",
+    "files": ["main.js", "preload.js", "src/**/*"],
+    "win": { "target": ["nsis", "portable"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "language": "1048" },
+    "linux": { "target": ["AppImage"], "category": "Education" },
+    "mac": { "target": ["dmg"], "category": "public.app-category.education" }
+  }
+}
