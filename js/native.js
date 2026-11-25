@@ -86,12 +86,9 @@ export function onResume(handler) {
   plugin('App')?.addListener('resume', handler);
 }
 
-export async function setStatusBar(bgColor, darkBackground) {
-  const sb = plugin('StatusBar');
-  if (!sb) return;
-  try {
-    await sb.setOverlaysWebView({ overlay: false });
-    await sb.setBackgroundColor({ color: bgColor });
-    await sb.setStyle({ style: darkBackground ? 'DARK' : 'LIGHT' });
-  } catch { /* not critical */ }
+/** Status/navigation bar icon colour. Android 15+ draws the app edge to edge, so the page paints the bar area itself. */
+export async function setStatusBar(_bgColor, darkBackground) {
+  const bars = plugin('SystemBars');
+  if (!bars) return;
+  try { await bars.setStyle({ style: darkBackground ? 'DARK' : 'LIGHT' }); } catch { /* not critical */ }
 }

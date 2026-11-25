@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION_CODE: ${{ github.run_number }}
-      VERSION_NAME: 1.1.${{ github.run_number }}
+      VERSION_NAME: 1.2.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -57,10 +57,31 @@ jobs:
           ./gradlew assembleRelease --no-daemon --stacktrace
           cp app/build/outputs/apk/release/app-release.apk ../subly.apk
 
+      - name: Build Google Play bundle (AAB, signed with the upload key)
+        working-directory: android
+        env:
+          UPLOAD_KEYSTORE_B64: ${{ secrets.SUBLY_UPLOAD_KEYSTORE_B64 }}
+          SUBLY_KEYSTORE_PASSWORD: ${{ secrets.SUBLY_UPLOAD_KEYSTORE_PASSWORD }}
+          SUBLY_KEY_ALIAS: ${{ secrets.SUBLY_UPLOAD_KEY_ALIAS }}
+          SUBLY_KEY_PASSWORD: ${{ secrets.SUBLY_UPLOAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$UPLOAD_KEYSTORE_B64" ]; then
+            echo "::notice::Google Play upload key is not set in repository secrets, skipping the AAB build."
+            exit 0
+          fi
+          echo "$UPLOAD_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export SUBLY_KEYSTORE="$RUNNER_TEMP/upload.jks"
+          ./gradlew bundleRelease --no-daemon --stacktrace
+          cp app/build/outputs/bundle/release/app-release.aab ../subly-google-play.aab
+          rm -f "$RUNNER_TEMP/upload.jks"
+
       - uses: actions/upload-artifact@v4
         with:
           name: subly-${{ env.VERSION_NAME }}
-          path: subly.apk
+          path: |
+            subly.apk
+            subly-google-play.aab
+          if-no-files-found: ignore
 
       - name: Publish release
         if: github.ref == 'refs/heads/main'
@@ -77,10 +98,14 @@ jobs:
           Новые версии ставятся поверх старой, подписки сохраняются.
 
           Перед переустановкой «с нуля» сделайте копию: **Настройки → Скачать копию**.
+
+          Файл **subly-google-play.aab** нужен только для загрузки в Google Play Console, на телефон его не ставят.
           NOTES
           echo "" >> notes.md
           echo "Сборка из коммита ${GITHUB_SHA::7}." >> notes.md
-          gh release create "android-v${VERSION_NAME}" subly.apk \
+          files="subly.apk"
+          [ -f subly-google-play.aab ] && files="$files subly-google-play.aab"
+          gh release create "android-v${VERSION_NAME}" $files \
             --target "$GITHUB_SHA" \
             --title "Subly для Android ${VERSION_NAME}" \
             --notes-file notes.md \

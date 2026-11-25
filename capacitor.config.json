@@ -3,13 +3,16 @@
   "appName": "Subly",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#eef1f6",
-    "adjustMarginsForEdgeToEdge": "auto"
+    "backgroundColor": "#eef1f6"
   },
   "plugins": {
     "LocalNotifications": {
       "smallIcon": "ic_stat_subly",
       "iconColor": "#2f46d0"
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "DEFAULT"
     }
   }
 }

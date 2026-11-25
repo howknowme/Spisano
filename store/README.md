@@ -9,6 +9,8 @@
 | `icon-512.png` | Иконка 512×512 |
 | `feature-1024x500.png` | Баннер 1024×500 (обязателен в Google Play) |
 | `screenshots/*.png` | 7 скриншотов 1080×1920 |
+| `google-play.md` | **Google Play: пошаговая публикация и готовые ответы на анкеты** |
+| `testers.md` | Тексты для поиска 12 тестировщиков (Pikabu, Хабр, Reddit, Telegram) |
 
 Политика конфиденциальности: https://howknowme.github.io/subly/privacy.html
 

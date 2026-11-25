@@ -129,7 +129,9 @@ npm run android:sync
 cd android && ./gradlew assembleRelease   # android/app/build/outputs/apk/release/app-release.apk
 ```
 
-APK подписывается ключом `android/app/subly-sideload.keystore`. Он лежит в репозитории специально, чтобы любая сборка ставилась поверх предыдущей. Для публикации в Google Play задайте свой ключ через переменные `SUBLY_KEYSTORE`, `SUBLY_KEYSTORE_PASSWORD`, `SUBLY_KEY_ALIAS`, `SUBLY_KEY_PASSWORD`.
+Приложение нацелено на Android 16 (API 36), Capacitor 8.
+
+APK подписывается ключом `android/app/subly-sideload.keystore`. Он лежит в репозитории специально, чтобы любая сборка ставилась поверх предыдущей. Пакет для Google Play (`subly-google-play.aab`) подписывается отдельным секретным ключом загрузки из секретов GitHub (`SUBLY_UPLOAD_*`), см. [`store/google-play.md`](store/google-play.md).
 
 ## Политика конфиденциальности
 
