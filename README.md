@@ -119,6 +119,7 @@ scripts/                    сборка www/, шрифты, иконки Androi
 
 - **Сайт** выкладывается на GitHub Pages при пуше в `main` (`.github/workflows/pages.yml`).
 - **APK** собирается в GitHub Actions и публикуется в Releases (`.github/workflows/android.yml`).
+- **Магазины:** тексты, скриншоты, иконка и инструкция для RuStore и Google Play лежат в [`store/`](store/README.md).
 
 Собрать APK у себя (нужны JDK 21 и Android SDK):
 
@@ -129,6 +130,10 @@ cd android && ./gradlew assembleRelease   # android/app/build/outputs/apk/releas
 ```
 
 APK подписывается ключом `android/app/subly-sideload.keystore`. Он лежит в репозитории специально, чтобы любая сборка ставилась поверх предыдущей. Для публикации в Google Play задайте свой ключ через переменные `SUBLY_KEYSTORE`, `SUBLY_KEYSTORE_PASSWORD`, `SUBLY_KEY_ALIAS`, `SUBLY_KEY_PASSWORD`.
+
+## Политика конфиденциальности
+
+[howknowme.github.io/subly/privacy.html](https://howknowme.github.io/subly/privacy.html)
 
 ## Лицензия
 

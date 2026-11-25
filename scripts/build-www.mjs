@@ -3,7 +3,7 @@ import { cp, rm, mkdir } from 'node:fs/promises';
 
 const root = new URL('..', import.meta.url);
 const out = new URL('www/', root);
-const files = ['index.html', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'css', 'js', 'fonts'];
+const files = ['index.html', 'privacy.html', 'sw.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'css', 'js', 'fonts'];
 
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
