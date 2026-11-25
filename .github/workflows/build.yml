@@ -5,21 +5,20 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npm install
-      - run: npx electron-builder --publish never
-        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      - run: sudo apt-get update && sudo apt-get install -y nsis
+      - run: npm ci
+      - run: npm run dist:win
+      - run: npm run dist:linux
+      - run: npm run build:html
       - uses: actions/upload-artifact@v4
         with:
-          name: Catedra-${{ matrix.os }}
+          name: Catedra
           path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
+            dist/Catedra-Setup-*.exe
+            dist/catedra_*_amd64.deb
+            Catedra.html

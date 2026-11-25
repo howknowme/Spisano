@@ -15,7 +15,7 @@ function loadData() {
   try { const d = JSON.parse(raw); const b = blank(); return { ...b, ...d, settings: { ...b.settings, ...(d.settings || {}) } }; }
   catch { return blank(); }
 }
-let D = loadData();
+let D = blank();
 function save() {
   const json = JSON.stringify(D);
   try { if (window.desktop) window.desktop.save(json); else localStorage.setItem(KEY, json); }
@@ -48,6 +48,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal
 const embedded = (() => { try { return !window.desktop && window.top !== window.self; } catch { return true; } })();
 const EMB_MSG = 'În versiunea online tipărirea și salvarea fișierelor nu sunt disponibile. Folosiți fișierul Catedra.html descărcat pe calculator.';
 function printHTML(html) {
+  if (window.desktop && window.desktop.print) return window.desktop.print(html);
   if (embedded) return toast(EMB_MSG);
   let p = $('#print'); if (!p) { p = document.createElement('div'); p.id = 'print'; p.className = 'print-area'; document.body.appendChild(p); }
   p.innerHTML = html; window.print();
@@ -635,4 +636,4 @@ window.loadDemo = (force) => {
   save(); toast('Date demonstrative încărcate'); go('acasa');
 };
 
-go('acasa');
+(async () => { try { if (window.desktopReady) await window.desktopReady; } catch {} D = loadData(); go('acasa'); })();

@@ -4,13 +4,16 @@
   "version": "1.0.0",
   "description": "Catedra – asistentul digital al profesorului (catalog, medii, absențe, orar, planificare, proiecte de lecție, teste).",
   "main": "main.js",
-  "author": "Catedra",
+  "author": {
+    "name": "Catedra",
+    "email": "noreply@catedra.local"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux",
-    "dist:mac": "electron-builder --mac"
+    "dist:win": "electron-builder --win dir --x64 && makensis build/installer.nsi",
+    "dist:linux": "electron-builder --linux deb --x64",
+    "build:html": "node scripts/build-single.js"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -19,10 +22,73 @@
   "build": {
     "appId": "ro.catedra.app",
     "productName": "Catedra",
-    "files": ["main.js", "preload.js", "src/**/*"],
-    "win": { "target": ["nsis", "portable"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "language": "1048" },
-    "linux": { "target": ["AppImage"], "category": "Education" },
-    "mac": { "target": ["dmg"], "category": "public.app-category.education" }
-  }
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Catedra",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "Catedra-Setup-${version}.exe",
+      "language": "1048"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Education",
+      "maintainer": "Catedra <noreply@catedra.local>",
+      "synopsis": "Asistentul profesorului",
+      "artifactName": "catedra_${version}_amd64.deb"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.education"
+    },
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
+    }
+  },
+  "homepage": "https://github.com/howknowme/youtube-"
 }

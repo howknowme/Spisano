@@ -31,11 +31,24 @@ npm install
 npm start
 ```
 
-## Construire program de instalare
+## Instalare
+
+**Windows:** rulați `Catedra-Setup-1.0.0.exe` → Înainte → Instalează. Nu sunt necesare drepturi de administrator. Se creează scurtături pe Desktop și în meniul Start. Datele se păstrează în `%APPDATA%\Catedra` și nu se șterg la dezinstalare.
+
+> Programul nu este semnat digital, așa că Windows SmartScreen poate afișa „Windows a protejat computerul”. Apăsați „Mai multe informații” → „Rulează oricum”.
+
+**Linux (Ubuntu, Debian, Mint):**
 ```bash
-npm run dist:win    # Windows (.exe) – recomandat pe Windows
-npm run dist:mac    # macOS (.dmg)
-npm run dist:linux  # Linux (.AppImage)
+sudo apt install ./catedra_1.0.0_amd64.deb
+```
+Aplicația apare în meniu la „Educație”. Datele se păstrează în `~/.config/Catedra`.
+
+## Construire
+```bash
+npm install
+npm run dist:win     # dist/Catedra-Setup-1.0.0.exe (pe Linux necesită pachetul nsis)
+npm run dist:linux   # dist/catedra_1.0.0_amd64.deb
+npm run build:html   # Catedra.html
 ```
 Sau din GitHub: **Actions → Build Catedra → Run workflow**, apoi descărcați fișierul din „Artifacts”.
 
