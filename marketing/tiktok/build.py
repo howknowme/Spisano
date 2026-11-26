@@ -468,26 +468,48 @@ MODEL_BY_VIDEO = {'c-solo': 'gemini-2.5-flash-preview-tts'}  # 3.8 free tier all
 MODEL_BY_TEXT = {'Один.': 'gemini-3.8-flash-lite-tts'}  # 2.5 read its style prompt aloud on this one-word line
 
 
+MODEL_ORDER = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts',
+               'gemini-3.1-flash-tts-preview', 'gemini-2.5-pro-preview-tts']
+
+
+def _voice_key(model, text):
+    return hashlib.sha1(f'{model}|{GEMINI_VOICE}|{GEMINI_STYLE}|{text}'.encode()).hexdigest()[:12]
+
+
 def voice_file(text):
-    """Synthesize one line with Gemini TTS (cached). Static gain per line, gentle edges. Returns (filename, seconds)."""
+    """Synthesize one line with Gemini TTS (cached). Static gain per line, gentle edges. Returns (filename, seconds).
+    Free keys allow ~10 lines a day per model: when one model is spent, the rest of the video moves to the next."""
+    import time
     vdir = os.path.join(ROOT, 'shared', 'voice')
     os.makedirs(vdir, exist_ok=True)
-    model = MODEL_BY_VIDEO.get(CURRENT_VIDEO['name'], GEMINI_MODEL)
-    model = MODEL_BY_TEXT.get(text, model)
-    style = GEMINI_STYLE
-    key = hashlib.sha1(f'{model}|{GEMINI_VOICE}|{GEMINI_STYLE}|{text}'.encode()).hexdigest()[:12]
-    raw, out = os.path.join(vdir, key + '-raw.wav'), os.path.join(vdir, key + '.wav')
-    if not os.path.exists(out):
-        env = dict(os.environ, NODE_USE_ENV_PROXY='1', TTS_STYLE=style)
-        import time
-        for attempt in range(8):
-            time.sleep(21)  # free tier: 3 requests a minute
-            r = subprocess.run(['node', os.path.join(ROOT, 'tts-gemini.mjs'), GEMINI_VOICE, raw, model, '--', text],
-                               env=env, capture_output=True, text=True)
-            if os.path.exists(raw):
-                break
-        if not os.path.exists(raw):
-            raise SystemExit('Gemini TTS failed: ' + r.stdout[-300:] + r.stderr[-300:])
+    preferred = MODEL_BY_TEXT.get(text) or MODEL_BY_VIDEO.get(CURRENT_VIDEO['name'], GEMINI_MODEL)
+    candidates = [preferred] + [m for m in MODEL_ORDER if m != preferred]
+    out = next((os.path.join(vdir, _voice_key(m, text) + '.wav') for m in candidates
+                if os.path.exists(os.path.join(vdir, _voice_key(m, text) + '.wav'))), None)
+    if not out:
+        env = dict(os.environ, NODE_USE_ENV_PROXY='1', TTS_STYLE=GEMINI_STYLE)
+        models = [m for m in candidates if m not in EXHAUSTED]
+        raw = None
+        while models and not raw:
+            model = models[0]
+            raw = os.path.join(vdir, _voice_key(model, text) + '-raw.wav')
+            for attempt in range(6):
+                time.sleep(21)  # free tier: 3 requests a minute
+                r = subprocess.run(['node', os.path.join(ROOT, 'tts-gemini.mjs'), GEMINI_VOICE, raw, model, '--', text],
+                                   env=env, capture_output=True, text=True)
+                if os.path.exists(raw):
+                    break
+                if 'per day' in r.stdout:
+                    EXHAUSTED.add(model)
+                    break
+            if not os.path.exists(raw):
+                raw = None
+                models.pop(0)
+            else:
+                MODEL_BY_VIDEO[CURRENT_VIDEO['name']] = model  # keep one voice model through the video
+        if not raw:
+            raise SystemExit('Gemini TTS: every model is out of today\'s free quota or failing: ' + r.stdout[-300:])
+        out = raw.replace('-raw.wav', '.wav')
         tmp = raw.replace('-raw.wav', '-tmp.wav')
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', raw, '-af',
                         'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,'
@@ -504,6 +526,9 @@ def voice_file(text):
     dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out],
                                capture_output=True, text=True).stdout)
     return os.path.basename(out), dur
+
+
+EXHAUSTED = set()
 
 
 def place_voice(name, order):
@@ -523,33 +548,38 @@ def place_voice(name, order):
     return new_order, clips
 
 
-import sys
-ONLY = set(sys.argv[1:])
-for build in (video_a, video_b, video_c, video_d):
-    name, title, scenes, order, music = build()
-    if ONLY and name not in ONLY:
-        continue
-    CURRENT_VIDEO['name'] = name
-    order, voice_clips = place_voice(name, order)
-    proj = os.path.join(ROOT, name)
-    os.makedirs(os.path.join(proj, 'compositions'), exist_ok=True)
-    dst_assets = os.path.join(proj, 'assets')
-    if os.path.exists(dst_assets):
-        shutil.rmtree(dst_assets)
-    shutil.copytree(SHARED, dst_assets)
-    os.makedirs(os.path.join(dst_assets, 'music'), exist_ok=True)
-    bed_src = os.path.join(ROOT, 'shared', 'music', music[0])
-    bed_out = os.path.join(dst_assets, 'music', music[0].replace('.mp3', '.m4a'))
-    # phone speakers can't play sub-bass: they rattle ("fart") on it. Cut below 120 Hz, thin the 200 Hz mud.
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', bed_src, '-af',
-                    'highpass=f=120:poles=2,highpass=f=120:poles=2,equalizer=f=200:t=q:w=1.2:g=-4,lowpass=f=14000',
-                    '-c:a', 'aac', '-b:a', '192k', bed_out], check=True)
-    for f in os.listdir(os.path.join(proj, 'compositions')):
-        os.remove(os.path.join(proj, 'compositions', f))
-    for cid, html in scenes.items():
-        open(os.path.join(proj, 'compositions', f'{cid}.html'), 'w', encoding='utf8').write(html)
-    open(os.path.join(proj, 'index.html'), 'w', encoding='utf8').write(index(title, order, [], music, voice_clips))
-    os.makedirs(os.path.join(dst_assets, 'voice'), exist_ok=True)
-    for f, *_ in voice_clips:
-        shutil.copy(os.path.join(ROOT, 'shared', 'voice', f), os.path.join(dst_assets, 'voice', f))
-    print(name, 'voice lines:', len(voice_clips), '|', 'scenes:', [c for c, _ in order], 'length:', round(sum(d for _, d in order), 2), 's')
+def main():
+    import sys
+    ONLY = set(sys.argv[1:])
+    for build in (video_a, video_b, video_c, video_d):
+        name, title, scenes, order, music = build()
+        if ONLY and name not in ONLY:
+            continue
+        CURRENT_VIDEO['name'] = name
+        order, voice_clips = place_voice(name, order)
+        proj = os.path.join(ROOT, name)
+        os.makedirs(os.path.join(proj, 'compositions'), exist_ok=True)
+        dst_assets = os.path.join(proj, 'assets')
+        if os.path.exists(dst_assets):
+            shutil.rmtree(dst_assets)
+        shutil.copytree(SHARED, dst_assets)
+        os.makedirs(os.path.join(dst_assets, 'music'), exist_ok=True)
+        bed_src = os.path.join(ROOT, 'shared', 'music', music[0])
+        bed_out = os.path.join(dst_assets, 'music', music[0].replace('.mp3', '.m4a'))
+        # phone speakers can't play sub-bass: they rattle ("fart") on it. Cut below 120 Hz, thin the 200 Hz mud.
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', bed_src, '-af',
+                        'highpass=f=120:poles=2,highpass=f=120:poles=2,equalizer=f=200:t=q:w=1.2:g=-4,lowpass=f=14000',
+                        '-c:a', 'aac', '-b:a', '192k', bed_out], check=True)
+        for f in os.listdir(os.path.join(proj, 'compositions')):
+            os.remove(os.path.join(proj, 'compositions', f))
+        for cid, html in scenes.items():
+            open(os.path.join(proj, 'compositions', f'{cid}.html'), 'w', encoding='utf8').write(html)
+        open(os.path.join(proj, 'index.html'), 'w', encoding='utf8').write(index(title, order, [], music, voice_clips))
+        os.makedirs(os.path.join(dst_assets, 'voice'), exist_ok=True)
+        for f, *_ in voice_clips:
+            shutil.copy(os.path.join(ROOT, 'shared', 'voice', f), os.path.join(dst_assets, 'voice', f))
+        print(name, 'voice lines:', len(voice_clips), '|', 'scenes:', [c for c, _ in order], 'length:', round(sum(d for _, d in order), 2), 's')
+
+
+if __name__ == '__main__':
+    main()

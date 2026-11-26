@@ -34,3 +34,19 @@ cd a-number && npx hyperframes render
 ```
 
 Перед сборкой поправьте пути в начале `build.py` (`/home/user/subly/fonts/fonts.css`) под свою папку.
+
+## Неделя роликов под старым именем Subly (`week/`)
+
+Пока в TikTok нельзя сменить имя аккаунта (7 дней), семь роликов сделаны под **Subly**: старая иконка «S», экраны приложения с названием Subly, в голосе — «Сабли».
+
+| День | Файл | Тема |
+|---|---|---|
+| 1 | `week/subly-w1-forgot.mp4` | 5 подписок, которые ты забыл отменить |
+| 2 | `week/subly-w2-coffee.mp4` | 399 ₽ в месяц — это мало? (399 × 12 × 10) |
+| 3 | `week/subly-w3-family.mp4` | Семейная подписка: твоя доля |
+| 4 | `week/subly-w4-bills.mp4` | ЖКХ и аренда, кнопка «Оплачено» |
+| 5 | `week/subly-w5-calendar.mp4` | Календарь списаний и прогноз |
+| 6 | `week/subly-w6-privacy.mp4` | Без регистрации и доступа к банку |
+| 7 | `week/subly-w7-budget.mp4` | Бюджет на подписки |
+
+Подписи: `week/captions-week.md`. Сборка: `build_week.py` (переиспользует `build.py`), экраны Subly — `shared-subly/assets/` (шрифты берутся из `shared/assets/fonts`), треки — `music/`.
