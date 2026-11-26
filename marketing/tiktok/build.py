@@ -65,7 +65,7 @@ def index(title, scenes, variables, music=None, voice=()):
         f, offset, vol = music
         if voice:
             vol = round(vol * 0.38, 3)  # bed sits under the voice
-        hosts.append(f'''      <audio id="bed" class="clip" src="assets/music/{f}" data-start="0" data-duration="{total}"
+        hosts.append(f'''      <audio id="bed" class="clip" src="assets/music/{f.replace('.mp3', '.m4a')}" data-start="0" data-duration="{total}"
         data-media-start="{offset}" data-volume="{vol}" data-fade-in="0.3" data-fade-out="1.2" data-track-index="3"></audio>''')
     return f"""<!doctype html>
 <html lang="ru" data-composition-variables='{json.dumps(variables, ensure_ascii=False)}'>
@@ -364,7 +364,7 @@ def voice_file(text):
     """Synthesize one line with Piper (cached), loudness-normalised to -16 LUFS. Returns (filename, seconds)."""
     vdir = os.path.join(ROOT, 'shared', 'voice')
     os.makedirs(vdir, exist_ok=True)
-    key = hashlib.sha1((VOICE_MODEL + '|v5|' + text).encode()).hexdigest()[:12]
+    key = hashlib.sha1((VOICE_MODEL + '|v6|' + text).encode()).hexdigest()[:12]
     raw, out = os.path.join(vdir, key + '-raw.wav'), os.path.join(vdir, key + '.wav')
     if not os.path.exists(out):
         subprocess.run(['python3', '-m', 'piper', '-m', VOICE_MODEL, '-f', raw, '--length-scale', '0.92', '--sentence-silence', '0.15',
@@ -373,7 +373,7 @@ def voice_file(text):
         tmp = raw.replace('-raw.wav', '-tmp.wav')
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', raw, '-af',
                         'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,'
-                        'adeclick,deesser=i=0.6:m=0.6:f=0.5,highpass=f=80,lowpass=f=7500,'
+                        'adeclick,deesser=i=0.6:m=0.6:f=0.5,highpass=f=100:poles=2,lowpass=f=7500,'
                         'afade=t=in:d=0.02,areverse,afade=t=in:d=0.05,areverse,apad=pad_dur=0.05', '-ar', '44100', tmp], check=True)
         # one static gain per line (no dynamic loudness processing): speech RMS to about -19 dBFS, peaks kept under -3 dBFS
         pcm = subprocess.run(['ffmpeg', '-v', 'error', '-i', tmp, '-f', 's16le', '-ac', '1', '-'], capture_output=True).stdout
@@ -416,7 +416,12 @@ for build in (video_a, video_b, video_c):
         shutil.rmtree(dst_assets)
     shutil.copytree(SHARED, dst_assets)
     os.makedirs(os.path.join(dst_assets, 'music'), exist_ok=True)
-    shutil.copy(os.path.join(ROOT, 'shared', 'music', music[0]), os.path.join(dst_assets, 'music', music[0]))
+    bed_src = os.path.join(ROOT, 'shared', 'music', music[0])
+    bed_out = os.path.join(dst_assets, 'music', music[0].replace('.mp3', '.m4a'))
+    # phone speakers can't play sub-bass: they rattle ("fart") on it. Cut below 120 Hz, thin the 200 Hz mud.
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', bed_src, '-af',
+                    'highpass=f=120:poles=2,highpass=f=120:poles=2,equalizer=f=200:t=q:w=1.2:g=-4,lowpass=f=14000',
+                    '-c:a', 'aac', '-b:a', '192k', bed_out], check=True)
     for f in os.listdir(os.path.join(proj, 'compositions')):
         os.remove(os.path.join(proj, 'compositions', f))
     for cid, html in scenes.items():
