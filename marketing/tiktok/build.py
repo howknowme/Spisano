@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generates three vertical TikTok HyperFrames projects for recruiting Subly testers.
+"""Generates three vertical TikTok HyperFrames projects for recruiting Spisano testers.
 
-Shared look: Subly ultramarine / near-black grounds, Unbounded display + Manrope body,
+Shared look: Spisano ultramarine / near-black grounds, Unbounded display + Manrope body,
 real app screenshots in a phone frame, one shared call-to-action scene.
 Run: python3 build.py  (then check / render each project)
 """
@@ -199,7 +199,7 @@ def video_a():
     tl.fromTo("#a-app-chip", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "back.out(2)" }, 1.6);""")
     s['a-cta'] = cta('a-cta')
     order = [('a-hook', 2.6), ('a-count', 4.2), ('a-app', 4.2), ('a-cta', 5)]
-    return 'a-number', 'Subly TikTok A — Число', s, order, ('a-bed.mp3', 9.95, 0.85)
+    return 'a-number', 'Spisano TikTok A — Число', s, order, ('a-bed.mp3', 9.95, 0.85)
 
 
 # =====================================================================
@@ -244,10 +244,10 @@ def video_b():
   #b-save-notif .title { font-size: 30px; font-weight: 700; }
   #b-save-notif .text { font-size: 28px; margin-top: 2px; color: #3b4255; }
 """, f"""    <div id="b-save-bg" class="bg"></div>
-    <h2 id="b-save-t1" class="center display">А Subly напомнил бы за день</h2>
+    <h2 id="b-save-t1" class="center display">А «Списано» напомнило бы за день</h2>
     {phone('b-save-ph', 'alerts-dark.png')}
     <div id="b-save-notif">{open(os.path.join(SHARED, 'icon.svg'), encoding='utf8').read()}
-      <div><div class="title">Subly · завтра</div><div class="text">Okko: пробный период закончится завтра</div></div>
+      <div><div class="title">Списано · завтра</div><div class="text">Okko: пробный период закончится завтра</div></div>
     </div>""", """
     tl.fromTo("#b-save-t1", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 0);
     tl.fromTo("#b-save-ph", { y: 500 }, { y: 0, duration: 0.6, ease: "power4.out" }, 0.15);
@@ -276,7 +276,7 @@ def video_b():
     });""")
     s['b-cta'] = cta('b-cta')
     order = [('b-lock', 3.6), ('b-save', 3.8), ('b-tour', 6.0), ('b-cta', 5)]
-    return 'b-trial', 'Subly TikTok B — Пробный период', s, order, ('b-bed.mp3', 0, 0.8)
+    return 'b-trial', 'Spisano TikTok B — Пробный период', s, order, ('b-bed.mp3', 0, 0.8)
 
 
 # =====================================================================
@@ -324,7 +324,7 @@ def video_c():
   #c-show-t1 { top: 300px; font-size: 50px; }
   #c-show-p1, #c-show-p2, #c-show-p3 { top: 470px; }
 """, f"""    <div id="c-show-bg" class="bg"></div>
-    <h2 id="c-show-t1" class="center display">Subly — трекер подписок</h2>
+    <h2 id="c-show-t1" class="center display">«Списано» — трекер подписок</h2>
     {phone('c-show-p1', 'overview-light.png')}
     {phone('c-show-p2', 'calendar-light.png')}
     {phone('c-show-p3', 'alerts-light.png')}""", """
@@ -334,7 +334,7 @@ def video_c():
     tl.fromTo("#c-show-p3", { y: 1500 }, { y: 0, duration: 0.45, ease: "power4.out" }, 2.1);""")
     s['c-cta'] = cta('c-cta')
     order = [('c-type', 5.175), ('c-rule', 3.6), ('c-show', 3.2), ('c-cta', 5)]
-    return 'c-solo', 'Subly TikTok C — Один разработчик', s, order, ('c-bed.mp3', 0, 0.95)
+    return 'c-solo', 'Spisano TikTok C — Один разработчик', s, order, ('c-bed.mp3', 0, 0.95)
 
 
 VOICE_MODEL = '/home/user/subly-tiktok/voices/ru_RU-dmitri-medium.onnx'
@@ -347,14 +347,14 @@ VOICE = {
     },
     'b-trial': {
         'b-lock': [(0.1, 'Восемь утра. Списали триста девяносто девять рублей.'), (None, 'Пробный период закончился, а отменить ты опять забыл.')],
-        'b-save': [(0.15, 'А Сабли напомнил бы об этом за день.')],
+        'b-save': [(0.15, 'А приложение «Списано» напомнило бы об этом за день.')],
         'b-tour': [(0.1, 'Все подписки в одном месте.'), (2.1, 'Календарь списаний.'), (4.1, 'И прогноз на год.')],
         'b-cta': [(0.15, 'Приложение бесплатное и без рекламы. Ищу двенадцать тестировщиков. Напиши «хочу» в комментах.')],
     },
     'c-solo': {
         'c-type': [(0.1, 'Я сделал приложение.'), (1.425, 'Один.'), (2.355, 'Без рекламы.'), (3.305, 'Без регистрации.'), (4.4, 'Бесплатно.')],
         'c-rule': [(0.0, 'Но Гугл Плей требует двенадцать тестировщиков на две недели.'), (None, 'А у меня — ноль.')],
-        'c-show': [(0.15, 'Это Сабли — трекер подписок. Считает траты и напоминает до списания.')],
+        'c-show': [(0.15, 'Это «Списано» — трекер подписок. Считает траты и напоминает до списания.')],
         'c-cta': [(0.15, 'Помоги мне выйти в магазин. Напиши «хочу» в комментах, и я пришлю ссылку.')],
     },
 }
@@ -427,8 +427,12 @@ def place_voice(name, order):
     return new_order, clips
 
 
+import sys
+ONLY = set(sys.argv[1:])
 for build in (video_a, video_b, video_c):
     name, title, scenes, order, music = build()
+    if ONLY and name not in ONLY:
+        continue
     CURRENT_VIDEO['name'] = name
     order, voice_clips = place_voice(name, order)
     proj = os.path.join(ROOT, name)
