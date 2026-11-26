@@ -2,7 +2,7 @@
 //   npm run build && python3 -m http.server 8766 -d www &   then: node scripts/docs-shots.cjs
 const { chromium } = require('playwright');
 const path = require('path');
-const out = path.join(__dirname, '..', 'docs');
+const out = path.join(__dirname, '..', 'docs', 'spisano');
 const base = 'http://localhost:8766/';
 (async () => {
   const b = await chromium.launch();

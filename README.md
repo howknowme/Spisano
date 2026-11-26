@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icon.svg" width="88" height="88" alt="">
+  <img src="docs/spisano/icon.svg" width="88" height="88" alt="">
 </p>
 
 <h1 align="center">Списано</h1>
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/overview.png" alt="Обзор: расходы в месяц, бюджет, напоминания и прогноз" width="820">
+  <img src="docs/spisano/overview.png" alt="Обзор: расходы в месяц, бюджет, напоминания и прогноз" width="820">
 </p>
 
 ## Зачем это
@@ -49,15 +49,15 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 Списания по любому графику: каждые N дней, недель, месяцев или лет. Если подписка оформлена 31-го, в коротких месяцах дата корректно переносится на последний день.
 
 <p align="center">
-  <img src="docs/phone-overview.png" alt="Обзор на телефоне, тёмная тема" width="240">
+  <img src="docs/spisano/phone-overview.png" alt="Обзор на телефоне, тёмная тема" width="240">
   &nbsp;
-  <img src="docs/phone-list.png" alt="Список подписок" width="240">
+  <img src="docs/spisano/phone-list.png" alt="Список подписок" width="240">
   &nbsp;
-  <img src="docs/phone-form.png" alt="Карточка подписки" width="240">
+  <img src="docs/spisano/phone-form.png" alt="Карточка подписки" width="240">
 </p>
 
 <p align="center">
-  <img src="docs/calendar.png" alt="Календарь списаний" width="820">
+  <img src="docs/spisano/calendar.png" alt="Календарь списаний" width="820">
 </p>
 
 ## Приватность
