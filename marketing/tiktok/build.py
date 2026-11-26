@@ -367,6 +367,95 @@ GEMINI_STYLE = ('Natural relaxed young guy talking to a friend in a TikTok video
                 'Conversational and warm, not an announcer. Medium-fast pace.')
 
 
+
+# =====================================================================
+# D — «Ребрендинг»: Subly is taken seven times over → Списано
+# =====================================================================
+def video_d():
+    s = {}
+    icon = open(os.path.join(SHARED, 'icon.svg'), encoding='utf8').read()
+    s['d-hook'] = scene('d-hook', """
+  #d-hook-bg { background: #0f1218; }
+  #d-hook-t1 { top: 470px; font-size: 52px; color: #c9d0e3; }
+  #d-hook-name { top: 590px; font-size: 170px; }
+""", """    <div id="d-hook-bg" class="bg"></div>
+    <p id="d-hook-t1" class="center display">Назвал своё приложение</p>
+    <h1 id="d-hook-name" class="center display">Subly</h1>""", """
+    tl.fromTo("#d-hook-name", { scale: 1 }, { scale: 1.06, duration: 2.6, ease: "none" }, 0);""")
+
+    cards = [('Subly – Subscription Tracker', 'App Store'), ('Subly: Subscription Manager', 'Google Play'),
+             ('Subscriptions – Subly', 'App Store'), ('Subly Money Tracker', 'App Store'),
+             ('Subly: Subscription Tracker', 'Google Play'), ('Subly', 'RuStore'), ('Subly', 'Product Hunt')]
+    card_html = '\n'.join(f'    <div class="dcard" id="d-copies-c{i}" style="top:{420 + i * 104}px"><span>{n}</span><i>{st}</i></div>'
+                          for i, (n, st) in enumerate(cards))
+    s['d-copies'] = scene('d-copies', """
+  #d-copies-bg { background: #0f1218; }
+  #d-copies-t1 { top: 300px; font-size: 50px; }
+  .dcard { position: absolute; left: 130px; width: 640px; height: 88px; padding: 0 26px; border-radius: 20px; background: #1d2230;
+           display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 29px; font-weight: 700; }
+  .dcard span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dcard i { font-style: normal; font-size: 28px; font-weight: 700; color: #8796ff; white-space: nowrap; }
+  #d-copies-n { top: 1170px; font-size: 64px; color: #ffd36b; }
+""", f"""    <div id="d-copies-bg" class="bg"></div>
+    <h2 id="d-copies-t1" class="center display">Оказалось, Subly уже есть…</h2>
+{card_html}
+    <p id="d-copies-n" class="center display">7 штук 😅</p>""", f"""
+    tl.fromTo("#d-copies-t1", {{ y: 30, opacity: 0 }}, {{ y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }}, 0);
+    for (let i = 0; i < {len(cards)}; i++) {{
+      tl.fromTo("#d-copies-c" + i, {{ y: -60, opacity: 0, rotation: (i % 2 ? 3 : -3) }}, {{ y: 0, opacity: 1, rotation: 0, duration: 0.26, ease: "back.out(2)" }}, 0.445 + i * 0.43);
+    }}
+    tl.fromTo("#d-copies-n", {{ scale: 1.6, opacity: 0 }}, {{ scale: 1, opacity: 1, duration: 0.3, ease: "power4.out" }}, 3.0);""")
+
+    coin_icon = icon.replace('<circle', '<circle id="d-rename-coin"')
+    s['d-rename'] = scene('d-rename', """
+  #d-rename-bg { background: #0f1218; }
+  #d-rename-old { top: 380px; font-size: 110px; color: #6d768a; }
+  #d-rename-strike { position: absolute; left: 230px; width: 440px; top: 440px; height: 12px; border-radius: 6px; background: #ff7a72; transform-origin: left center; }
+  #d-rename-t1 { top: 560px; font-size: 46px; color: #c9d0e3; }
+  #d-rename-icon { position: absolute; left: 330px; top: 690px; width: 240px; height: 240px; }
+  #d-rename-icon svg { width: 240px; height: 240px; display: block; border-radius: 56px; }
+  #d-rename-name { top: 990px; font-size: 96px; }
+""", f"""    <div id="d-rename-bg" class="bg"></div>
+    <p id="d-rename-old" class="center display">Subly</p>
+    <div id="d-rename-strike"></div>
+    <p id="d-rename-t1" class="center display">Поэтому теперь оно —</p>
+    <div id="d-rename-icon">{coin_icon}</div>
+    <h1 id="d-rename-name" class="center display">Списано</h1>""", """
+    tl.fromTo("#d-rename-strike", { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: "power3.inOut" }, 0.1);
+    tl.fromTo("#d-rename-t1", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 0.4);
+    // the drop lands at 0.85 s into this scene
+    tl.fromTo("#d-rename-icon", { scale: 0.3, opacity: 0, rotation: -12 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.45, ease: "back.out(2.2)" }, 0.85);
+    tl.fromTo("#d-rename-coin", { x: 160, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 1.2);
+    tl.fromTo("#d-rename-name", { y: 40, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 0.95);
+    tl.fromTo("#d-rename-icon", { y: 0 }, { y: -12, duration: 0.43, ease: "sine.inOut", yoyo: true, repeat: 5 }, 1.75);""")
+
+    s['d-why'] = scene('d-why', """
+  #d-why-bg { background: radial-gradient(90% 60% at 50% 20%, #2b2f45 0%, #0f1218 70%); }
+  #d-why-t1 { top: 300px; font-size: 50px; color: #c9d0e3; }
+  #d-why-card { position: absolute; left: 130px; width: 640px; top: 420px; padding: 26px 30px; border-radius: 34px; background: rgba(255,255,255,.14); }
+  #d-why-card .app { font-size: 28px; font-weight: 700; opacity: .7; }
+  #d-why-card .title { font-size: 44px; font-weight: 700; margin-top: 8px; }
+  #d-why-card .title b { color: #ffd36b; }
+  #d-why-card .text { font-size: 32px; margin-top: 6px; opacity: .9; }
+  #d-why-t2 { top: 720px; font-size: 58px; }
+  #d-why-t2 span { color: #8796ff; }
+""", """    <div id="d-why-bg" class="bg"></div>
+    <p id="d-why-t1" class="center display">Знакомое слово? 🙃</p>
+    <div id="d-why-card">
+      <div class="app">💳 БАНК · сейчас</div>
+      <div class="title"><b id="d-why-word">Списано</b> 399 ₽</div>
+      <div class="text">OKKO · подписка</div>
+    </div>
+    <h2 id="d-why-t2" class="center display">Теперь ты узнаешь об этом <span>заранее</span></h2>""", """
+    tl.fromTo("#d-why-t1", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 0);
+    tl.fromTo("#d-why-card", { y: -120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "back.out(1.6)" }, 0.2);
+    tl.fromTo("#d-why-word", { scale: 1 }, { scale: 1.15, duration: 0.2, ease: "power2.out", yoyo: true, repeat: 1 }, 1.05);
+    tl.fromTo("#d-why-t2", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 1.5);""")
+    s['d-cta'] = cta('d-cta')
+    order = [('d-hook', 2.6), ('d-copies', 3.6), ('d-rename', 3.6), ('d-why', 3.6), ('d-cta', 5)]
+    return 'd-rebrand', 'Spisano TikTok D — Ребрендинг', s, order, ('d-bed.mp3', 6.4, 0.85)
+
+
 CURRENT_VIDEO = {'name': ''}
 MODEL_BY_VIDEO = {'c-solo': 'gemini-2.5-flash-preview-tts'}  # 3.8 free tier allows 10 lines a day
 MODEL_BY_TEXT = {'Один.': 'gemini-3.8-flash-lite-tts'}  # 2.5 read its style prompt aloud on this one-word line
@@ -429,7 +518,7 @@ def place_voice(name, order):
 
 import sys
 ONLY = set(sys.argv[1:])
-for build in (video_a, video_b, video_c):
+for build in (video_a, video_b, video_c, video_d):
     name, title, scenes, order, music = build()
     if ONLY and name not in ONLY:
         continue
