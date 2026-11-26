@@ -43,6 +43,7 @@ function hashId(key) {
 
 let channelReady = false;
 let syncing = Promise.resolve();
+let lastSignature = '';
 
 /**
  * Replaces all pending reminders with `items`: [{ key, title, body, at: Date }].
@@ -56,16 +57,24 @@ export function syncReminders(items, channelName) {
       try { await ln.createChannel({ id: CHANNEL, name: channelName, importance: 4, visibility: 1, vibration: true }); } catch { /* old Android */ }
       channelReady = true;
     }
-    const pending = await ln.getPending();
-    if (pending.notifications.length) await ln.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
     const now = Date.now();
     const list = items.filter((n) => n.at.getTime() > now + 30000).slice(0, 64).map((n) => ({
       id: hashId(n.key), title: n.title, body: n.body, channelId: CHANNEL,
       smallIcon: 'ic_stat_subly', iconColor: '#2f46d0',
       schedule: { at: n.at, allowWhileIdle: true },
+      // Reminders don't need to-the-minute alarms. Without this, the plugin opens the
+      // "Alarms & reminders" settings on every schedule() call, and since the app
+      // reschedules on resume, the user gets bounced back to settings in a loop.
+      isExactNotification: false,
       extra: { view: 'overview' },
     }));
+    // Nothing changed since the last sync: leave the system alarms alone.
+    const signature = JSON.stringify(list.map((n) => [n.id, n.title, n.body, n.schedule.at.getTime()]));
+    if (signature === lastSignature) return;
+    const pending = await ln.getPending();
+    if (pending.notifications.length) await ln.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
     if (list.length) await ln.schedule({ notifications: list });
+    lastSignature = signature;
   }).catch(() => { /* keep the app usable if scheduling fails */ });
   return syncing;
 }
