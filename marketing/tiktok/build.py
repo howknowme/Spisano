@@ -60,7 +60,7 @@ def index(title, scenes, variables, music=None, voice=()):
         data-width="{W}" data-height="{H}"></div>''')
         t += dur
     for i, (f, start, dur, cid) in enumerate(voice):
-        hosts.append(f'''      <audio id="vo-{i}" class="clip" src="assets/voice/{f}" data-start="{start}" data-duration="{dur}" data-volume="1" data-track-index="2"></audio>''')
+        hosts.append(f'''      <audio id="vo-{i}" class="clip" src="assets/voice/{f}" data-start="{start}" data-duration="{dur}" data-volume="1" data-fade-in="0.02" data-fade-out="0.05" data-track-index="2"></audio>''')
     if music:
         f, offset, vol = music
         if voice:
@@ -351,7 +351,7 @@ VOICE = {
         'b-cta': [(0.15, 'Приложение бесплатное и без рекламы. Ищу двенадцать тестировщиков. Напиши «хочу» в комментах.')],
     },
     'c-solo': {
-        'c-type': [(0.1, 'Я сделал приложение.'), (1.425, 'Один.'), (2.355, 'Без рекламы.'), (3.305, 'Без регистрации.'), (4.33, 'Бесплатно.')],
+        'c-type': [(0.1, 'Я сделал приложение.'), (1.425, 'Один.'), (2.355, 'Без рекламы.'), (3.305, 'Без регистрации.'), (4.4, 'Бесплатно.')],
         'c-rule': [(0.0, 'Но Гугл Плей требует двенадцать тестировщиков на две недели.'), (None, 'А у меня — ноль.')],
         'c-show': [(0.15, 'Это Сабли — трекер подписок. Считает траты и напоминает до списания.')],
         'c-cta': [(0.15, 'Помоги мне выйти в магазин. Напиши «хочу» в комментах, и я пришлю ссылку.')],
@@ -364,14 +364,25 @@ def voice_file(text):
     """Synthesize one line with Piper (cached), loudness-normalised to -16 LUFS. Returns (filename, seconds)."""
     vdir = os.path.join(ROOT, 'shared', 'voice')
     os.makedirs(vdir, exist_ok=True)
-    key = hashlib.sha1((VOICE_MODEL + '|' + text).encode()).hexdigest()[:12]
+    key = hashlib.sha1((VOICE_MODEL + '|v5|' + text).encode()).hexdigest()[:12]
     raw, out = os.path.join(vdir, key + '-raw.wav'), os.path.join(vdir, key + '.wav')
     if not os.path.exists(out):
-        subprocess.run(['python3', '-m', 'piper', '-m', VOICE_MODEL, '-f', raw, '--length-scale', '0.92', '--sentence-silence', '0.15'],
+        subprocess.run(['python3', '-m', 'piper', '-m', VOICE_MODEL, '-f', raw, '--length-scale', '0.92', '--sentence-silence', '0.15',
+                        '--volume', '0.5', '--noise-scale', '0.5', '--noise-w-scale', '0.6'],
                        input=text.encode(), check=True, capture_output=True)
+        tmp = raw.replace('-raw.wav', '-tmp.wav')
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', raw, '-af',
                         'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,'
-                        'highpass=f=80,loudnorm=I=-16:TP=-1.5:LRA=7', '-ar', '44100', out], check=True)
+                        'adeclick,deesser=i=0.6:m=0.6:f=0.5,highpass=f=80,lowpass=f=7500,'
+                        'afade=t=in:d=0.02,areverse,afade=t=in:d=0.05,areverse,apad=pad_dur=0.05', '-ar', '44100', tmp], check=True)
+        # one static gain per line (no dynamic loudness processing): speech RMS to about -19 dBFS, peaks kept under -3 dBFS
+        pcm = subprocess.run(['ffmpeg', '-v', 'error', '-i', tmp, '-f', 's16le', '-ac', '1', '-'], capture_output=True).stdout
+        import numpy as np
+        x = np.frombuffer(pcm[:len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+        rms = float(np.sqrt(np.mean(x[np.abs(x) > 0.01] ** 2))) or 1e-4
+        gain = min(10 ** (-19 / 20) / rms, 10 ** (-3 / 20) / max(float(np.abs(x).max()), 1e-4))
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', tmp, '-af', f'volume={gain:.4f}', out], check=True)
+        os.remove(tmp)
         os.remove(raw)
     dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out],
                                capture_output=True, text=True).stdout)
