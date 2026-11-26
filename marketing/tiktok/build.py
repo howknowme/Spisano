@@ -51,7 +51,7 @@ def scene(cid, css, body, script):
 """
 
 
-def index(title, scenes, variables):
+def index(title, scenes, variables, music=None, voice=()):
     total = round(sum(d for _, d in scenes), 2)
     hosts, t = [], 0.0
     for cid, dur in scenes:
@@ -59,6 +59,14 @@ def index(title, scenes, variables):
         data-start="{round(t, 2)}" data-duration="{dur}" data-track-index="1" data-track-kind="graphics"
         data-width="{W}" data-height="{H}"></div>''')
         t += dur
+    for i, (f, start, dur, cid) in enumerate(voice):
+        hosts.append(f'''      <audio id="vo-{i}" class="clip" src="assets/voice/{f}" data-start="{start}" data-duration="{dur}" data-volume="1" data-track-index="2"></audio>''')
+    if music:
+        f, offset, vol = music
+        if voice:
+            vol = round(vol * 0.38, 3)  # bed sits under the voice
+        hosts.append(f'''      <audio id="bed" class="clip" src="assets/music/{f}" data-start="0" data-duration="{total}"
+        data-media-start="{offset}" data-volume="{vol}" data-fade-in="0.3" data-fade-out="1.2" data-track-index="3"></audio>''')
     return f"""<!doctype html>
 <html lang="ru" data-composition-variables='{json.dumps(variables, ensure_ascii=False)}'>
   <head>
@@ -191,7 +199,7 @@ def video_a():
     tl.fromTo("#a-app-chip", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "back.out(2)" }, 1.6);""")
     s['a-cta'] = cta('a-cta')
     order = [('a-hook', 2.6), ('a-count', 4.2), ('a-app', 4.2), ('a-cta', 5)]
-    return 'a-number', 'Subly TikTok A — Число', s, order
+    return 'a-number', 'Subly TikTok A — Число', s, order, ('a-bed.mp3', 9.95, 0.85)
 
 
 # =====================================================================
@@ -221,7 +229,9 @@ def video_b():
     <h2 id="b-lock-t1" class="center display">Пробный период закончился 🙃</h2>
     <p id="b-lock-t2" class="center">И ты опять забыл его отменить</p>""", """
     tl.fromTo("#b-lock-card", { scale: 0.96 }, { scale: 1, duration: 0.3, ease: "back.out(3)" }, 0.05);
-    tl.fromTo("#b-lock-t2", { y: 20, opacity: 0 }, { y: 0, opacity: 0.75, duration: 0.35, ease: "power3.out" }, 1.4);
+    tl.fromTo("#b-lock-t2", { y: 20, opacity: 0 }, { y: 0, opacity: 0.75, duration: 0.35, ease: "power3.out" }, 3.75);
+    tl.fromTo("#b-lock-time", { scale: 1 }, { scale: 1.08, duration: 6.5, ease: "none" }, 0);
+    tl.fromTo("#b-lock-t1", { scale: 1 }, { scale: 1.05, duration: 6.5, ease: "none" }, 0);
     tl.fromTo("#b-lock-card", { x: 0 }, { x: 10, duration: 0.06, yoyo: true, repeat: 5, ease: "none" }, 0.6);""")
 
     s['b-save'] = scene('b-save', """
@@ -266,7 +276,7 @@ def video_b():
     });""")
     s['b-cta'] = cta('b-cta')
     order = [('b-lock', 3.6), ('b-save', 3.8), ('b-tour', 6.0), ('b-cta', 5)]
-    return 'b-trial', 'Subly TikTok B — Пробный период', s, order
+    return 'b-trial', 'Subly TikTok B — Пробный период', s, order, ('b-bed.mp3', 0, 0.8)
 
 
 # =====================================================================
@@ -276,7 +286,7 @@ def video_c():
     s = {}
     words = ['Я сделал приложение.', 'Один.', 'Без рекламы.', 'Без регистрации.', 'Бесплатно.']
     grounds = ['#2f46d0', '#0f1218', '#2f46d0', '#0f1218', '#2f46d0']
-    times = [(0, 1.3), (1.3, 0.95), (2.25, 0.95), (3.2, 0.95), (4.15, 0.85)]
+    times = [(0, 1.425), (1.425, 0.93), (2.355, 0.95), (3.305, 0.93), (4.235, 0.94)]
     blocks = []
     for i, (w, g, (t0, d)) in enumerate(zip(words, grounds, times)):
         blocks.append(f'''    <div id="c-type-b{i}" class="clip bg" data-start="{t0}" data-duration="{d}" data-track-index="0" style="background:{g}">
@@ -287,10 +297,10 @@ def video_c():
   #c-type-w0 { font-size: 66px; top: 680px; }
   #c-type-w1 { font-size: 170px; top: 660px; color: #ffd36b; }
 """, '\n'.join(blocks), """
-    [1.3, 2.25, 3.2, 4.15].forEach((t, i) => {
+    [1.425, 2.355, 3.305, 4.235].forEach((t, i) => {
       tl.fromTo("#c-type-w" + (i + 1), { scale: 1.25, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: "power4.out" }, t);
     });
-    tl.fromTo("#c-type-w0", { scale: 1 }, { scale: 1.05, duration: 1.3, ease: "none" }, 0);""")
+    tl.fromTo("#c-type-w0", { scale: 1 }, { scale: 1.05, duration: 1.425, ease: "none" }, 0);""")
 
     s['c-rule'] = scene('c-rule', """
   #c-rule-bg { background: #0f1218; }
@@ -322,21 +332,86 @@ def video_c():
     tl.fromTo("#c-show-p2", { y: 1500 }, { y: 0, duration: 0.45, ease: "power4.out" }, 1.1);
     tl.fromTo("#c-show-p3", { y: 1500 }, { y: 0, duration: 0.45, ease: "power4.out" }, 2.1);""")
     s['c-cta'] = cta('c-cta')
-    order = [('c-type', 5.0), ('c-rule', 3.6), ('c-show', 3.2), ('c-cta', 5)]
-    return 'c-solo', 'Subly TikTok C — Один разработчик', s, order
+    order = [('c-type', 5.175), ('c-rule', 3.6), ('c-show', 3.2), ('c-cta', 5)]
+    return 'c-solo', 'Subly TikTok C — Один разработчик', s, order, ('c-bed.mp3', 0, 0.95)
+
+
+VOICE_MODEL = '/home/user/subly-tiktok/voices/ru_RU-dmitri-medium.onnx'
+VOICE = {
+    'a-number': {
+        'a-hook': [(0.1, 'Сколько ты тратишь на подписки?')],
+        'a-count': [(0.2, 'Почти четырнадцать тысяч в месяц.'), (2.35, 'А в год — сто шестьдесят шесть тысяч.')],
+        'a-app': [(0.15, 'Поэтому я сделал приложение. Оно само всё считает и напоминает до списания.')],
+        'a-cta': [(0.15, 'Оно бесплатное. Мне нужно двенадцать тестировщиков. Напиши «хочу» в комментах.')],
+    },
+    'b-trial': {
+        'b-lock': [(0.1, 'Восемь утра. Списали триста девяносто девять рублей.'), (None, 'Пробный период закончился, а отменить ты опять забыл.')],
+        'b-save': [(0.15, 'А Сабли напомнил бы об этом за день.')],
+        'b-tour': [(0.1, 'Все подписки в одном месте.'), (2.1, 'Календарь списаний.'), (4.1, 'И прогноз на год.')],
+        'b-cta': [(0.15, 'Приложение бесплатное и без рекламы. Ищу двенадцать тестировщиков. Напиши «хочу» в комментах.')],
+    },
+    'c-solo': {
+        'c-type': [(0.1, 'Я сделал приложение.'), (1.425, 'Один.'), (2.355, 'Без рекламы.'), (3.305, 'Без регистрации.'), (4.33, 'Бесплатно.')],
+        'c-rule': [(0.0, 'Но Гугл Плей требует двенадцать тестировщиков на две недели.'), (None, 'А у меня — ноль.')],
+        'c-show': [(0.15, 'Это Сабли — трекер подписок. Считает траты и напоминает до списания.')],
+        'c-cta': [(0.15, 'Помоги мне выйти в магазин. Напиши «хочу» в комментах, и я пришлю ссылку.')],
+    },
+}
+
+import hashlib, subprocess
+
+def voice_file(text):
+    """Synthesize one line with Piper (cached), loudness-normalised to -16 LUFS. Returns (filename, seconds)."""
+    vdir = os.path.join(ROOT, 'shared', 'voice')
+    os.makedirs(vdir, exist_ok=True)
+    key = hashlib.sha1((VOICE_MODEL + '|' + text).encode()).hexdigest()[:12]
+    raw, out = os.path.join(vdir, key + '-raw.wav'), os.path.join(vdir, key + '.wav')
+    if not os.path.exists(out):
+        subprocess.run(['python3', '-m', 'piper', '-m', VOICE_MODEL, '-f', raw, '--length-scale', '0.92', '--sentence-silence', '0.15'],
+                       input=text.encode(), check=True, capture_output=True)
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', raw, '-af',
+                        'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,'
+                        'highpass=f=80,loudnorm=I=-16:TP=-1.5:LRA=7', '-ar', '44100', out], check=True)
+        os.remove(raw)
+    dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out],
+                               capture_output=True, text=True).stdout)
+    return os.path.basename(out), dur
+
+
+def place_voice(name, order):
+    """Stretch scenes to fit their lines; return the new order and the voice clips with absolute starts."""
+    clips, new_order, t = [], [], 0.0
+    for cid, base in order:
+        cursor, end = 0.0, 0.0
+        for off, text in VOICE.get(name, {}).get(cid, []):
+            f, d = voice_file(text)
+            start = cursor + 0.12 if off is None else off
+            clips.append((f, round(t + start, 3), round(d, 3), cid))
+            cursor = start + d
+            end = max(end, cursor)
+        dur = round(max(base, end + 0.45), 3)
+        new_order.append((cid, dur))
+        t += dur
+    return new_order, clips
 
 
 for build in (video_a, video_b, video_c):
-    name, title, scenes, order = build()
+    name, title, scenes, order, music = build()
+    order, voice_clips = place_voice(name, order)
     proj = os.path.join(ROOT, name)
     os.makedirs(os.path.join(proj, 'compositions'), exist_ok=True)
     dst_assets = os.path.join(proj, 'assets')
     if os.path.exists(dst_assets):
         shutil.rmtree(dst_assets)
     shutil.copytree(SHARED, dst_assets)
+    os.makedirs(os.path.join(dst_assets, 'music'), exist_ok=True)
+    shutil.copy(os.path.join(ROOT, 'shared', 'music', music[0]), os.path.join(dst_assets, 'music', music[0]))
     for f in os.listdir(os.path.join(proj, 'compositions')):
         os.remove(os.path.join(proj, 'compositions', f))
     for cid, html in scenes.items():
         open(os.path.join(proj, 'compositions', f'{cid}.html'), 'w', encoding='utf8').write(html)
-    open(os.path.join(proj, 'index.html'), 'w', encoding='utf8').write(index(title, order, []))
-    print(name, 'scenes:', [c for c, _ in order], 'length:', round(sum(d for _, d in order), 2), 's')
+    open(os.path.join(proj, 'index.html'), 'w', encoding='utf8').write(index(title, order, [], music, voice_clips))
+    os.makedirs(os.path.join(dst_assets, 'voice'), exist_ok=True)
+    for f, *_ in voice_clips:
+        shutil.copy(os.path.join(ROOT, 'shared', 'voice', f), os.path.join(dst_assets, 'voice', f))
+    print(name, 'voice lines:', len(voice_clips), '|', 'scenes:', [c for c, _ in order], 'length:', round(sum(d for _, d in order), 2), 's')
