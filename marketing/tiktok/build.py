@@ -295,10 +295,11 @@ def video_c():
     s['c-type'] = scene('c-type', """
   .word { top: 700px; font-size: 84px; }
   #c-type-w0 { font-size: 66px; top: 680px; }
+  #c-type-w3 { font-size: 72px; }
   #c-type-w1 { font-size: 170px; top: 660px; color: #ffd36b; }
 """, '\n'.join(blocks), """
     [1.425, 2.355, 3.305, 4.235].forEach((t, i) => {
-      tl.fromTo("#c-type-w" + (i + 1), { scale: 1.25, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: "power4.out" }, t);
+      tl.fromTo("#c-type-w" + (i + 1), { scale: 1.1, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: "power4.out" }, t);
     });
     tl.fromTo("#c-type-w0", { scale: 1 }, { scale: 1.05, duration: 1.425, ease: "none" }, 0);""")
 
@@ -360,22 +361,42 @@ VOICE = {
 
 import hashlib, subprocess
 
+GEMINI_VOICE = 'Achird'
+GEMINI_MODEL = 'gemini-3.8-flash-tts'
+GEMINI_STYLE = ('Natural relaxed young guy talking to a friend in a TikTok video. '
+                'Conversational and warm, not an announcer. Medium-fast pace.')
+
+
+CURRENT_VIDEO = {'name': ''}
+MODEL_BY_VIDEO = {'c-solo': 'gemini-2.5-flash-preview-tts'}  # 3.8 free tier allows 10 lines a day
+MODEL_BY_TEXT = {'Один.': 'gemini-3.8-flash-lite-tts'}  # 2.5 read its style prompt aloud on this one-word line
+
+
 def voice_file(text):
-    """Synthesize one line with Piper (cached), loudness-normalised to -16 LUFS. Returns (filename, seconds)."""
+    """Synthesize one line with Gemini TTS (cached). Static gain per line, gentle edges. Returns (filename, seconds)."""
     vdir = os.path.join(ROOT, 'shared', 'voice')
     os.makedirs(vdir, exist_ok=True)
-    key = hashlib.sha1((VOICE_MODEL + '|v6|' + text).encode()).hexdigest()[:12]
+    model = MODEL_BY_VIDEO.get(CURRENT_VIDEO['name'], GEMINI_MODEL)
+    model = MODEL_BY_TEXT.get(text, model)
+    style = GEMINI_STYLE
+    key = hashlib.sha1(f'{model}|{GEMINI_VOICE}|{GEMINI_STYLE}|{text}'.encode()).hexdigest()[:12]
     raw, out = os.path.join(vdir, key + '-raw.wav'), os.path.join(vdir, key + '.wav')
     if not os.path.exists(out):
-        subprocess.run(['python3', '-m', 'piper', '-m', VOICE_MODEL, '-f', raw, '--length-scale', '0.92', '--sentence-silence', '0.15',
-                        '--volume', '0.5', '--noise-scale', '0.5', '--noise-w-scale', '0.6'],
-                       input=text.encode(), check=True, capture_output=True)
+        env = dict(os.environ, NODE_USE_ENV_PROXY='1', TTS_STYLE=style)
+        import time
+        for attempt in range(8):
+            time.sleep(21)  # free tier: 3 requests a minute
+            r = subprocess.run(['node', os.path.join(ROOT, 'tts-gemini.mjs'), GEMINI_VOICE, raw, model, '--', text],
+                               env=env, capture_output=True, text=True)
+            if os.path.exists(raw):
+                break
+        if not os.path.exists(raw):
+            raise SystemExit('Gemini TTS failed: ' + r.stdout[-300:] + r.stderr[-300:])
         tmp = raw.replace('-raw.wav', '-tmp.wav')
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', raw, '-af',
-                        'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,'
-                        'adeclick,deesser=i=0.6:m=0.6:f=0.5,highpass=f=100:poles=2,lowpass=f=7500,'
-                        'afade=t=in:d=0.02,areverse,afade=t=in:d=0.05,areverse,apad=pad_dur=0.05', '-ar', '44100', tmp], check=True)
-        # one static gain per line (no dynamic loudness processing): speech RMS to about -19 dBFS, peaks kept under -3 dBFS
+                        'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,'
+                        'highpass=f=80:poles=2,deesser=i=0.5:m=0.5:f=0.5,lowpass=f=11000,afade=t=in:d=0.015,areverse,afade=t=in:d=0.04,areverse,apad=pad_dur=0.05',
+                        '-ar', '44100', tmp], check=True)
         pcm = subprocess.run(['ffmpeg', '-v', 'error', '-i', tmp, '-f', 's16le', '-ac', '1', '-'], capture_output=True).stdout
         import numpy as np
         x = np.frombuffer(pcm[:len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
@@ -408,6 +429,7 @@ def place_voice(name, order):
 
 for build in (video_a, video_b, video_c):
     name, title, scenes, order, music = build()
+    CURRENT_VIDEO['name'] = name
     order, voice_clips = place_voice(name, order)
     proj = os.path.join(ROOT, name)
     os.makedirs(os.path.join(proj, 'compositions'), exist_ok=True)
