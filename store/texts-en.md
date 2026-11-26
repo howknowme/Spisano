@@ -1,7 +1,7 @@
-# Subly — store listing (English)
+# Spisano — store listing (English)
 
 ## Title
-Subly: Subscription Tracker
+Spisano: Subscription Tracker
 
 ## Short description (up to 80 characters)
 All subscriptions and bills in one place. Reminders before charges. No sign-up.
@@ -9,7 +9,7 @@ All subscriptions and bills in one place. Reminders before charges. No sign-up.
 ## Full description
 How much do your subscriptions really cost? Streaming, music, cloud storage, phone, internet, gym, AI tools… Each one is small, but together they add up to a lot every year. And free trials quietly turn into paid plans.
 
-Subly shows the real total, reminds you before you are charged and helps you decide what to cancel.
+Spisano shows the real total, reminds you before you are charged and helps you decide what to cancel.
 
 PRIVATE
 • No sign-up, no accounts
@@ -41,7 +41,7 @@ YOUR DATA, YOUR CONTROL
 
 Dark theme, English and Russian.
 
-Subly is free and open source: github.com/howknowme/subly
+Spisano is free and open source: github.com/howknowme/subly
 
 ## Category
 Finance

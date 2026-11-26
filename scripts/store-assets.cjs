@@ -89,7 +89,7 @@ const scenes = [
     .ph{position:absolute;right:70px;top:60px;width:300px;height:530px;border-radius:30px;overflow:hidden;box-shadow:0 0 0 8px #0b0e1a,0 30px 60px rgba(0,0,0,.4)}
     .ph img{width:100%;display:block}
   </style>
-  <div class="t"><div class="logo"><span style="display:block;width:72px;height:72px;border-radius:17px;box-shadow:0 0 0 3px rgba(255,255,255,.4)">${iconSvg.replace('<svg ', '<svg width="72" height="72" ')}</span>Subly</div>
+  <div class="t"><div class="logo"><span style="display:block;width:72px;height:72px;border-radius:17px;box-shadow:0 0 0 3px rgba(255,255,255,.4)">${iconSvg.replace('<svg ', '<svg width="72" height="72" ')}</span>Списано</div>
   <h1>Все подписки под контролем</h1><p>Напоминания до списания. Без регистрации, данные только на телефоне.</p></div>
   <div class="ph"><img src="data:image/png;base64,${shots['1-overview']}"></div>`);
   await page.waitForTimeout(400);

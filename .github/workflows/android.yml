@@ -91,7 +91,7 @@ jobs:
           cat > notes.md <<'NOTES'
           ## Как установить
 
-          1. На телефоне скачайте **subly.apk** ниже.
+          1. На телефоне скачайте **spisano.apk** ниже.
           2. Откройте файл. Android попросит разрешить установку из этого источника (браузера или «Файлов»): разрешите.
           3. Нажмите **Установить**.
 
@@ -103,10 +103,11 @@ jobs:
           NOTES
           echo "" >> notes.md
           echo "Сборка из коммита ${GITHUB_SHA::7}." >> notes.md
-          files="subly.apk"
+          cp subly.apk spisano.apk   # new name; subly.apk stays so links already shared keep working
+          files="spisano.apk subly.apk"
           [ -f subly-google-play.aab ] && files="$files subly-google-play.aab"
           gh release create "android-v${VERSION_NAME}" $files \
             --target "$GITHUB_SHA" \
-            --title "Subly для Android ${VERSION_NAME}" \
+            --title "Списано для Android ${VERSION_NAME}" \
             --notes-file notes.md \
             --latest

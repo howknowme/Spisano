@@ -250,7 +250,7 @@ function applyTheme() {
   if (state.prefs.theme === 'auto') r.removeAttribute('data-theme');
   else r.setAttribute('data-theme', state.prefs.theme);
   r.lang = state.prefs.lang;
-  document.title = 'Subly';
+  document.title = T().appName;
   if (N.isNative()) {
     const bg = getComputedStyle(document.body).backgroundColor;
     const [rr, gg, bb] = (bg.match(/\d+/g) || [238, 241, 246]).map(Number);
@@ -285,6 +285,8 @@ function render() {
 
   // header summary
   $('#brand-tag').textContent = t.tagline;
+  $('#brand-name').textContent = t.appName;
+  $('#brand').setAttribute('aria-label', t.appName);
   $('#head-total').textContent = money(tot.month);
   $('#head-total-label').textContent = t.perMonth;
   $('#add-btn-label').textContent = t.add;
@@ -914,7 +916,7 @@ function backupText() {
   return JSON.stringify({ app: 'subly', version: 1, exported: new Date().toISOString(), subs: state.subs, prefs: { ...state.prefs, notified: {} } }, null, 2);
 }
 
-function exportJSON() { download(`subly-${today()}.json`, backupText(), 'application/json'); }
+function exportJSON() { download(`spisano-${today()}.json`, backupText(), 'application/json'); }
 
 function exportCSV() {
   const t = T();
@@ -924,13 +926,13 @@ function exportCSV() {
     rows.push([x.name, x.price, x.currency, x.unit, x.every, x.status === 'active' ? C.nextPayment(x, today()) : '', t.categories[x.category], x.status, x.shared,
       C.monthlyCost(x, base, rates).toFixed(2), x.trialEnd, x.method, x.url, x.notes]);
   }
-  download(`subly-${today()}.csv`, C.toCSV(rows), 'text/csv;charset=utf-8');
+  download(`spisano-${today()}.csv`, C.toCSV(rows), 'text/csv;charset=utf-8');
 }
 
 function exportICS() {
   const t = T();
-  const ics = C.toICS(state.subs, { remindDays: state.prefs.remindDays, labels: { calendar: 'Subly', trialEnds: t.trialEnds } });
-  download('subly.ics', ics, 'text/calendar;charset=utf-8');
+  const ics = C.toICS(state.subs, { remindDays: state.prefs.remindDays, labels: { calendar: t.appName, trialEnds: t.trialEnds } });
+  download('spisano.ics', ics, 'text/calendar;charset=utf-8');
 }
 
 function importJSON(text) {

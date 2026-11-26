@@ -1,5 +1,5 @@
 // Offline cache: app shell is cache-first; font files are cached on first use.
-const VERSION = 'subly-v4';
+const VERSION = 'subly-v5';
 const SHELL = ['./', 'index.html', 'privacy.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/i18n.js', 'js/native.js', 'icon.svg', 'manifest.webmanifest', 'icon-192.png', 'fonts/fonts.css'];
 
 self.addEventListener('install', (e) => {

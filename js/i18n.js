@@ -4,7 +4,7 @@ export const CATEGORIES = ['video', 'music', 'cloud', 'work', 'games', 'learning
 
 export const STRINGS = {
   ru: {
-    appName: 'Subly',
+    appName: 'Списано',
     tagline: 'Подписки и регулярные платежи под контролем',
     nav: { overview: 'Обзор', subs: 'Подписки', calendar: 'Календарь', prefs: 'Настройки' },
     add: 'Добавить',
@@ -160,7 +160,7 @@ export const STRINGS = {
       pastePh: 'Вставьте сюда содержимое резервной копии и нажмите «Восстановить»',
       restore: 'Восстановить',
       imported: (n) => `Загружено подписок: ${n}`,
-      importFail: 'Файл не похож на резервную копию Subly.',
+      importFail: 'Файл не похож на резервную копию «Списано».',
       copied: 'Скопировано',
       copyFail: 'Не удалось скопировать — выделите текст вручную.',
       loadDemo: 'Загрузить пример',
@@ -172,7 +172,7 @@ export const STRINGS = {
       android: 'Скачать для Android (.apk)',
       androidHint: 'Напоминания приходят, даже когда приложение закрыто.',
       about: 'О приложении',
-      aboutText: 'Subly не требует регистрации, не подключается к банку и ничего не отправляет на сервер. Интернет нужен только для обновления курсов валют.',
+      aboutText: '«Списано» не требует регистрации, не подключается к банку и ничего не отправляет на сервер. Интернет нужен только для обновления курсов валют.',
       privacy: 'Политика конфиденциальности',
       shortcuts: 'Горячие клавиши: N — новая подписка, / — поиск, Esc — закрыть.',
       storageWarn: 'Браузер не даёт сохранять данные (приватный режим?). Изменения пропадут после закрытия вкладки.',
@@ -216,7 +216,7 @@ export const STRINGS = {
     notifTitle: 'Скоро списание',
   },
   en: {
-    appName: 'Subly',
+    appName: 'Spisano',
     tagline: 'Subscriptions and recurring bills, under control',
     nav: { overview: 'Overview', subs: 'Subscriptions', calendar: 'Calendar', prefs: 'Preferences' },
     add: 'Add',
@@ -344,7 +344,7 @@ export const STRINGS = {
       pastePh: 'Paste the backup contents here and press “Restore”',
       restore: 'Restore',
       imported: (n) => `Subscriptions loaded: ${n}`,
-      importFail: 'This does not look like a Subly backup.',
+      importFail: 'This does not look like a Spisano backup.',
       copied: 'Copied', copyFail: 'Could not copy — select the text by hand.',
       loadDemo: 'Load example', clearAll: 'Delete all data',
       clearConfirm: 'Delete all subscriptions? Press again to confirm.',
@@ -352,7 +352,7 @@ export const STRINGS = {
       install: 'Install app', installHint: 'Works offline and opens like a regular app.',
       android: 'Download for Android (.apk)', androidHint: 'Reminders arrive even when the app is closed.',
       about: 'About',
-      aboutText: 'Subly needs no account, never connects to your bank and sends nothing to a server. The internet is only used to update exchange rates.',
+      aboutText: 'Spisano needs no account, never connects to your bank and sends nothing to a server. The internet is only used to update exchange rates.',
       privacy: 'Privacy policy',
       shortcuts: 'Shortcuts: N — new subscription, / — search, Esc — close.',
       storageWarn: 'The browser does not allow saving (private mode?). Changes will be lost when the tab closes.',

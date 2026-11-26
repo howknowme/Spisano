@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notification icon: white "S" mark (Android tints it). -->
+<!-- Notification icon: the app mark (a "С" eating a coin), white; Android tints it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="300"
-    android:viewportHeight="300">
-    <group android:translateX="-106" android:translateY="-82">
-        <path
-            android:pathData="M160 328c19 24 54 40 96 40 54 0 90-26 90-66 0-86-176-46-176-134 0-38 35-62 86-62 37 0 67 13 86 34"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="46"
-            android:strokeLineCap="round"
-            android:fillColor="#00000000" />
-    </group>
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:pathData="M326.5 165.5A128 128 0 1 0 326.5 346.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="56"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M372 220a36 36 0 1 1 0 72a36 36 0 1 1 0 -72z"
+        android:fillColor="#FFFFFFFF" />
 </vector>

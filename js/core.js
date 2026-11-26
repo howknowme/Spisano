@@ -295,7 +295,7 @@ export function rrule(sub) {
 export function toICS(subs, { remindDays = 1, now = new Date(), labels = {} } = {}) {
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Subly//Subscriptions//RU', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    `X-WR-CALNAME:${icsEscape(labels.calendar || 'Subly')}`];
+    `X-WR-CALNAME:${icsEscape(labels.calendar || 'Списано')}`];
   for (const s of subs) {
     if (s.status !== 'active') continue;
     const first = s.trialEnd && s.trialEnd >= s.start ? nextPayment(s, fmtISO(new Date(parseDate(s.trialEnd).getTime() + 86400000))) : s.start;

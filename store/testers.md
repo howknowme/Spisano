@@ -8,7 +8,7 @@
 
 **Заголовок:** Сделал бесплатный трекер подписок без регистрации — нужны 12 тестировщиков для Google Play
 
-Привет! Я один сделал приложение **Subly**: оно показывает, сколько на самом деле уходит на подписки и регулярные платежи, и напоминает до списания.
+Привет! Я один сделал приложение **«Списано»**: оно показывает, сколько на самом деле уходит на подписки и регулярные платежи, и напоминает до списания.
 
 Что умеет:
 • считает расходы в месяц, год и день, с пересчётом валют;
@@ -33,9 +33,9 @@
 
 ## Сообщение для обмена тестированием (Reddit r/AndroidClosedTesting, r/TestersCommunity, Discord)
 
-**Title:** [Test for test] Subly — private subscription tracker, need testers (will test back)
+**Title:** [Test for test] Spisano — private subscription tracker, need testers (will test back)
 
-Hi! I'm a solo dev looking for testers for **Subly**, a free subscription and bill tracker: no sign-up, no ads, data stays on the phone. Reminders before charges, budget, calendar, 12-month forecast. Interface in English and Russian.
+Hi! I'm a solo dev looking for testers for **Spisano**, a free subscription and bill tracker: no sign-up, no ads, data stays on the phone. Reminders before charges, budget, calendar, 12-month forecast. Interface in English and Russian.
 
 I'll test your app back for the full 14 days: just drop your opt-in link in the reply.
 
@@ -48,7 +48,7 @@ Thanks!
 ## Сообщение для Telegram-чатов обмена тестированием
 
 Привет! Ищу тестировщиков для Google Play, тестирую взаимно все 14 дней.
-Приложение: **Subly**, трекер подписок и платежей без регистрации и рекламы.
+Приложение: **«Списано»**, трекер подписок и платежей без регистрации и рекламы.
 Скиньте свой Gmail и ссылку на ваше приложение, добавлю и поставлю ваше 🤝
 
 ---
@@ -60,7 +60,7 @@ Thanks!
 1. Открой на телефоне ссылку: **[OPT-IN LINK]**
    (войди тем же Gmail, что прислал мне)
 2. Нажми **«Стать тестировщиком»**, потом **«Скачать в Google Play»**.
-3. Установи Subly и открой. Можно оставить пример данных или сразу добавить свои подписки.
+3. Установи «Списано» и открой. Можно оставить пример данных или сразу добавить свои подписки.
 4. **Не удаляй приложение 14 дней** и открой его хотя бы несколько раз. Это важно для Google.
 5. Если что-то сломалось или неудобно, напиши мне. Можно скриншотом.
 

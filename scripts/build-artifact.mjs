@@ -18,7 +18,7 @@ const nativeBundle = `const N = (() => {\n${native.replace(/^export /gm, '')}\nr
 const appBundle = app.replace(/^import .*$/gm, '');
 const icon = Buffer.from(await read('icon.svg')).toString('base64');
 
-const out = `<title>Subly</title>
+const out = `<title>Списано</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="icon" href="data:image/svg+xml;base64,${icon}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap">
