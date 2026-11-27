@@ -494,3 +494,125 @@ textarea.input { resize: vertical; min-height: 64px; }
   .alert-bill .alert-text { flex-basis: calc(100% - 30px); }
   .alert-bill strong { margin-left: 28px; margin-right: auto; }
 }
+
+/* =====================================================================
+   App feel (tester feedback): glass navigation, motion, native controls
+   ===================================================================== */
+:root {
+  --glass: rgba(255, 255, 255, .62);
+  --glass-edge: rgba(255, 255, 255, .75);
+  --glass-shadow: 0 12px 32px -10px rgba(20, 24, 50, .35), 0 2px 6px rgba(20, 24, 50, .08);
+  --spring: cubic-bezier(.3, 1.35, .5, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --glass: rgba(30, 35, 50, .58); --glass-edge: rgba(255, 255, 255, .14); --glass-shadow: 0 14px 36px -10px rgba(0, 0, 0, .7); }
+}
+:root[data-theme="dark"] { --glass: rgba(30, 35, 50, .58); --glass-edge: rgba(255, 255, 255, .14); --glass-shadow: 0 14px 36px -10px rgba(0, 0, 0, .7); }
+
+/* no blue tap flash, no double-tap zoom delay, no text selection on controls: feels like an app, not a site */
+* { -webkit-tap-highlight-color: transparent; }
+html { touch-action: manipulation; }
+button, .btn, .nav-link, .chip, .cat-chip, .cat-tile, .seg-btn, .check, .swatch, .sub-main, .tl-btn, .rank-btn, .meter-btn, .cal-cell, .alert {
+  -webkit-user-select: none; user-select: none;
+}
+
+/* pressed state with a little spring */
+.btn, .icon-btn, .chip, .cat-chip, .cat-tile, .seg-btn, .swatch, .alert, .sub, .tl-btn, .rank-btn, .meter-btn, .cal-cell, .h-mark, .nav-link {
+  transition: transform .18s var(--spring), background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+}
+.btn:active, .icon-btn:active, .chip:active, .cat-chip:active, .cat-tile:active, .seg-btn:active, .swatch:active,
+.alert:active, .tl-btn:active, .rank-btn:active, .meter-btn:active, .cal-cell:active, .h-mark:active { transform: scale(.96); }
+.sub:has(.sub-main:active) { transform: scale(.985); }
+.nav-link:active { transform: scale(.92); }
+
+/* ---------- liquid-glass bottom bar, floating, with a gliding pill ---------- */
+body { padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+.nav-bottom {
+  inset: auto max(14px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+  padding: 6px; gap: 0; border: 0; border-radius: 28px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.9); backdrop-filter: blur(22px) saturate(1.9);
+  box-shadow: var(--glass-shadow), inset 0 0 0 1px var(--glass-edge), inset 0 1px 0 rgba(255, 255, 255, .35);
+  isolation: isolate;
+}
+.nav-bottom .nav-link { position: relative; z-index: 1; padding: 8px 4px 7px; border-radius: 22px; font-weight: 700; }
+.nav-bottom .nav-link[aria-current="page"] { color: var(--accent); }
+.nav-bottom .nav-link[aria-current="page"] .ico { transform: translateY(-1px) scale(1.08); }
+.nav-bottom .nav-link .ico { transition: transform .3s var(--spring); }
+.nav-pill { display: none; }
+.nav-bottom .nav-pill {
+  display: block; position: absolute; z-index: 0; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 4); border-radius: 22px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent), inset 0 1px 0 rgba(255, 255, 255, .4);
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform .45s var(--spring);
+}
+.nav-top .nav-link[aria-current="page"] { transition: background-color .25s, color .25s; }
+.top { background: var(--glass); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
+.toast { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 860px) { .toast { bottom: 28px; } }
+
+/* ---------- category chips (list filter) ---------- */
+.cat-scroll {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px;
+  margin: 0; min-width: 0; max-width: 100%; scroll-snap-type: x proximity;
+}
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-chip {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: 999px; scroll-snap-align: start;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 700 .85rem var(--font-body); cursor: pointer; white-space: nowrap;
+}
+.cat-chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.cat-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.cat-chip[aria-pressed="true"] i { box-shadow: 0 0 0 2px var(--bg); }
+
+/* ---------- category tiles (form) ---------- */
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 8px; }
+.cat-tile {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px; border-radius: 14px; text-align: left;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: 700 .82rem/1.2 var(--font-body); cursor: pointer;
+}
+.cat-tile i {
+  width: 26px; height: 26px; border-radius: 9px; flex: none;
+  background: color-mix(in oklab, var(--c) 22%, var(--surface)); box-shadow: inset 0 0 0 6px color-mix(in oklab, var(--c) 22%, var(--surface)), inset 0 0 0 13px var(--c);
+}
+.cat-tile[aria-checked="true"] { border-color: var(--c); background: color-mix(in oklab, var(--c) 12%, var(--surface)); }
+.cat-tile[aria-checked="true"] i { animation: tile-pop .35s var(--spring); }
+@keyframes tile-pop { 40% { transform: scale(1.25); } }
+
+/* ---------- segmented status in the form ---------- */
+.seg-full { display: grid; grid-template-columns: repeat(3, 1fr); }
+.seg-full .seg-btn { justify-content: center; height: 40px; }
+
+/* ---------- switches instead of checkboxes ---------- */
+.check { align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border-radius: 14px; }
+.check > span { display: flex; flex-direction: column; gap: 2px; }
+input.switch {
+  -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 50px; height: 30px; margin: 0; border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 35%, var(--surface)); cursor: pointer; outline: none;
+  transition: background-color .25s ease;
+}
+input.switch::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25); transition: transform .35s var(--spring);
+}
+input.switch:checked { background: var(--accent); }
+input.switch:checked::before { transform: translateX(20px); }
+input.switch:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 35%, transparent); }
+
+/* ---------- motion ---------- */
+.sheet.closing { animation: sheet-out .19s ease-in forwards; }
+@keyframes sheet-out { to { transform: translateY(40px); opacity: 0; } }
+.sheet::backdrop { transition: opacity .2s; }
+.chart .bar { transform-box: fill-box; transform-origin: 50% 100%; animation: bar-grow .6s var(--spring) both; animation-delay: calc(var(--i, 0) * 35ms); }
+@keyframes bar-grow { from { transform: scaleY(0); } }
+.meter-fill { transform-origin: left center; animation: meter-grow .7s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes meter-grow { from { transform: scaleX(0); } }
+.hb-fill { transform-origin: left center; animation: meter-grow .8s cubic-bezier(.2, .8, .2, 1) both .15s; }
+.badge, .alert { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-bottom .nav-pill, input.switch::before { transition: none; }
+}
+/* slide transitions must never make the page scroll sideways */
+html, body { overflow-x: clip; }

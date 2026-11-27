@@ -22,7 +22,21 @@ function persist() {
 const DEFAULT_RATES = {
   USD: 1, EUR: 1.08, GBP: 1.27, RUB: 0.0125, KZT: 0.002, UAH: 0.024, BYN: 0.31,
   TRY: 0.029, CNY: 0.14, AMD: 0.0026, GEL: 0.37, UZS: 0.000079,
+  MDL: 0.056, RON: 0.22, PLN: 0.25, CZK: 0.044, HUF: 0.0027, BGN: 0.55, RSD: 0.0092,
+  CHF: 1.13, SEK: 0.095, NOK: 0.093, DKK: 0.145, ISK: 0.0072,
+  AZN: 0.588, KGS: 0.0115, TJS: 0.094, TMT: 0.286, MNT: 0.00029,
+  ILS: 0.27, AED: 0.272, SAR: 0.267, QAR: 0.275, EGP: 0.02,
+  INR: 0.012, JPY: 0.0067, KRW: 0.00073, THB: 0.029, VND: 0.00004, IDR: 0.000063, SGD: 0.74, HKD: 0.128,
+  CAD: 0.73, AUD: 0.66, NZD: 0.6, BRL: 0.18, MXN: 0.055, ARS: 0.001, ZAR: 0.055,
 };
+// shown first in currency pickers, the rest follow alphabetically
+const POPULAR_CURRENCIES = ['RUB', 'USD', 'EUR', 'MDL', 'UAH', 'KZT', 'BYN', 'RON', 'PLN', 'GBP', 'TRY', 'GEL', 'AMD', 'AZN', 'UZS', 'KGS'];
+
+function orderedCurrencies(list) {
+  const set = new Set(list);
+  const first = [state.prefs.base, ...POPULAR_CURRENCIES].filter((c, i, a) => set.has(c) && a.indexOf(c) === i);
+  return [...first, ...[...set].filter((c) => !first.includes(c)).sort()];
+}
 
 function defaultPrefs() {
   // Russian first; English only when the browser asks for it explicitly and nothing else.
@@ -264,11 +278,30 @@ function applyTheme() {
 
 const VIEWS = ['overview', 'subs', 'calendar', 'prefs'];
 
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 function route() {
   const v = location.hash.replace('#', '');
+  const prev = ui.view;
   ui.view = VIEWS.includes(v) ? v : 'overview';
   render();
   window.scrollTo({ top: 0 });
+  if (ui.booted && prev !== ui.view && !reducedMotion()) {
+    const dir = Math.sign(VIEWS.indexOf(ui.view) - VIEWS.indexOf(prev)) || 1;
+    $('#view').animate([{ opacity: 0, transform: `translateX(${dir * 36}px)` }, { opacity: 1, transform: 'none' }],
+      { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    animateIn($('#view'), '.hero, .card, .alerts > *, .sub, .toolbar, .empty');
+  }
+  ui.booted = true;
+}
+
+/** Fade-and-rise entrance for freshly rendered blocks (only the first dozen, so it stays quick). */
+function animateIn(root, selector, step = 40) {
+  if (reducedMotion() || !root) return;
+  [...root.querySelectorAll(selector)].slice(0, 12).forEach((el, i) => {
+    el.animate([{ opacity: 0, transform: 'translateY(14px) scale(.985)' }, { opacity: 1, transform: 'none' }],
+      { duration: 360, delay: 60 + i * step, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+  });
 }
 
 function go(view) {
@@ -294,9 +327,16 @@ function render() {
 
   // navs
   for (const nav of document.querySelectorAll('[data-nav]')) {
-    nav.replaceChildren(...VIEWS.map((v) => h('a', {
-      href: '#' + v, class: 'nav-link', 'aria-current': ui.view === v ? 'page' : null,
-    }, icon({ overview: 'grid', subs: 'list', calendar: 'cal', prefs: 'gear' }[v], 20), h('span', null, t.nav[v]))));
+    if (nav.dataset.lang !== state.prefs.lang) {
+      nav.dataset.lang = state.prefs.lang;
+      nav.replaceChildren(h('span', { class: 'nav-pill', 'aria-hidden': 'true' }), ...VIEWS.map((v) => h('a', {
+        href: '#' + v, class: 'nav-link', dataset: { view: v },
+      }, icon({ overview: 'grid', subs: 'list', calendar: 'cal', prefs: 'gear' }[v], 20), h('span', null, t.nav[v]))));
+    }
+    nav.style.setProperty('--i', VIEWS.indexOf(ui.view));
+    for (const a of nav.querySelectorAll('.nav-link')) {
+      if (a.dataset.view === ui.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    }
   }
 
   const main = $('#view');
@@ -333,7 +373,7 @@ function viewOverview() {
   wrap.append(h('section', { class: 'hero' },
     h('div', { class: 'hero-main' },
       h('p', { class: 'eyebrow' }, t.activeCount(tot.count)),
-      h('p', { class: 'hero-num' }, money(tot.month)),
+      countUp(h('p', { class: 'hero-num' }, money(tot.month)), tot.month),
       h('p', { class: 'hero-sub' }, t.perMonth),
       budgetMeter(tot.month)),
     h('dl', { class: 'hero-facts' },
@@ -418,6 +458,21 @@ function lifetimeCard() {
       h('span', { class: 'rank-val num' }, money(r.value))));
   })));
   return card;
+}
+
+/** The big monthly total counts from its previous value to the new one. */
+function countUp(el, value) {
+  const from = ui.shownMonth ?? value;
+  ui.shownMonth = value;
+  if (from === value || reducedMotion()) return el;
+  const t0 = performance.now(), d = 650;
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / d), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = money(from + (value - from) * e);
+    if (k < 1 && el.isConnected) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  return el;
 }
 
 function emptyState() {
@@ -522,7 +577,7 @@ function forecastCard() {
         : '';
       const g = s('g', { class: 'bar-g', tabindex: 0, role: 'button', 'aria-label': `${monthName(b.key)}: ${money(b.total)}` });
       g.append(s('rect', { x: padL + bw * i, y: padT, width: bw, height: H - padT - padB, class: 'hit', fill: 'transparent' }));
-      if (path) g.append(s('path', { d: path, class: 'bar' + (b.total > avg * 1.25 ? ' bar-peak' : '') }));
+      if (path) g.append(s('path', { d: path, class: 'bar' + (b.total > avg * 1.25 ? ' bar-peak' : ''), style: `--i:${i}` }));
       const showLabel = data.length <= 6 || W > 560 || i % 2 === 0;
       if (showLabel) g.append(s('text', { x: cx, y: H - 9, 'text-anchor': 'middle', class: 'tick' + (i === 0 ? ' tick-now' : '') }, monthName(b.key, 'short').replace('.', '')));
       const show = () => {
@@ -615,20 +670,27 @@ function viewSubs() {
       onclick: () => { ui.status = st; saveUI(); render(); },
     }, st === 'all' ? t.filterAll : t['status' + st[0].toUpperCase() + st.slice(1)], h('span', { class: 'seg-count num' }, String(counts[st])))));
 
-  const catSel = h('select', { id: 'filter-cat', class: 'input input-select', 'aria-label': t.form.category, onchange: (e) => { ui.cat = e.target.value; saveUI(); renderList(); } },
-    h('option', { value: 'all' }, t.allCategories),
-    CATEGORIES.map((c) => h('option', { value: c, selected: ui.cat === c }, t.categories[c])));
+  const catChips = h('div', { id: 'filter-cat', class: 'cat-scroll', role: 'group', 'aria-label': t.form.category },
+    ['all', ...CATEGORIES].map((c) => h('button', {
+      type: 'button', class: 'cat-chip', 'aria-pressed': String(ui.cat === c), style: c === 'all' ? null : { '--c': `var(--c-${c})` },
+      onclick: (e) => {
+        ui.cat = c; saveUI();
+        for (const b of catChips.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
+        renderList(true);
+      },
+    }, c === 'all' ? null : h('i', { 'aria-hidden': 'true' }), c === 'all' ? t.allCategories : t.categories[c])));
   const sortSel = h('select', { id: 'sort', class: 'input input-select', 'aria-label': 'Sort', onchange: (e) => { ui.sort = e.target.value; saveUI(); renderList(); } },
     [['next', t.sortNext], ['price', t.sortPrice], ['name', t.sortName]].map(([v, l]) => h('option', { value: v, selected: ui.sort === v }, l)));
 
   wrap.append(h('div', { class: 'toolbar' },
     h('label', { class: 'search' }, icon('search'), search),
-    h('div', { class: 'toolbar-row' }, statusSeg, catSel, sortSel)));
+    h('div', { class: 'toolbar-row' }, statusSeg, sortSel),
+    catChips));
 
   const listBox = h('div', { class: 'sub-list-wrap' });
   wrap.append(listBox);
 
-  function renderList() {
+  function renderList(animate = false) {
     const q = ui.q.trim().toLowerCase();
     let items = state.subs.filter((x) =>
       (ui.status === 'all' || x.status === ui.status) &&
@@ -647,6 +709,7 @@ function viewSubs() {
     listBox.replaceChildren(
       h('p', { class: 'list-sum' }, `${items.length} · `, h('strong', { class: 'num' }, money(sumMonth)), ` ${t.perMonth}`),
       h('ul', { class: 'sub-list' }, items.map(({ x, next, m }) => subRow(x, next, m))));
+    if (animate) animateIn(listBox, '.sub', 30);
   }
   renderList();
   return wrap;
@@ -774,7 +837,7 @@ function viewPrefs() {
   const t = T();
   const p = state.prefs;
   const tp = t.prefs;
-  const currencies = Object.keys(p.rates).sort();
+  const currencies = orderedCurrencies(Object.keys(p.rates));
 
   const field = (label, control, hint) => h('div', { class: 'field' }, h('label', { class: 'label', for: control.id }, label), control, hint ? h('p', { class: 'hint' }, hint) : null);
   const select = (id, value, options, onchange) => h('select', { id, class: 'input input-select', onchange: (e) => onchange(e.target.value) },
@@ -982,6 +1045,14 @@ async function copyText(text, btn) {
 
 const dialog = () => $('#sheet');
 
+function closeSheet() {
+  const dlg = dialog();
+  if (!dlg.open || dlg.classList.contains('closing')) return;
+  if (reducedMotion()) { dlg.close(); return; }
+  dlg.classList.add('closing');
+  ui.sheetTimer = setTimeout(() => { dlg.classList.remove('closing'); dlg.close(); }, 190);
+}
+
 function openForm(sub, preset) {
   const t = T();
   const tf = t.form;
@@ -990,7 +1061,7 @@ function openForm(sub, preset) {
     id: uid(), name: '', price: '', currency: state.prefs.base, unit: 'month', every: 1, start: today(),
     category: 'other', status: 'active', trialEnd: '', shared: 1, method: '', url: '', notes: '', color: '', toCancel: false, ...preset,
   };
-  const currencies = [...new Set([...Object.keys(state.prefs.rates), draft.currency])].sort();
+  const currencies = orderedCurrencies([...Object.keys(state.prefs.rates), draft.currency]);
   const el = {};
   const input = (key, attrs) => (el[key] = h('input', { id: 'f-' + key, name: key, class: 'input', value: draft[key] ?? '', ...attrs }));
   const fieldWrap = (key, label, control, hint, extra = '') => h('div', { class: 'field ' + extra },
@@ -1010,16 +1081,35 @@ function openForm(sub, preset) {
   const every = input('every', { type: 'number', min: '1', max: '365', step: '1', inputmode: 'numeric', class: 'input input-num num' });
   const unit = (el.unit = h('select', { id: 'f-unit', class: 'input input-select' }, C.UNITS.map((u) => h('option', { value: u, selected: u === draft.unit }, t.unitNames[u]))));
   const start = input('start', { type: 'date', required: true });
-  const category = (el.category = h('select', { id: 'f-category', class: 'input input-select' }, CATEGORIES.map((c) => h('option', { value: c, selected: c === draft.category }, t.categories[c]))));
+  el.category = h('input', { type: 'hidden', id: 'f-category', value: draft.category });
+  const category = h('div', { class: 'cat-grid', role: 'radiogroup', 'aria-label': tf.category },
+    el.category,
+    CATEGORIES.map((c) => h('button', {
+      type: 'button', role: 'radio', class: 'cat-tile', 'aria-checked': String(c === draft.category), style: { '--c': `var(--c-${c})` },
+      onclick: (e) => {
+        el.category.value = c;
+        for (const b of category.querySelectorAll('.cat-tile')) b.setAttribute('aria-checked', String(b === e.currentTarget));
+        preview();
+      },
+    }, h('i', { 'aria-hidden': 'true' }), h('span', null, t.categories[c]))));
   const trial = input('trialEnd', { type: 'date' });
   const shared = (el.shared = h('select', { id: 'f-shared', class: 'input input-select' }, Array.from({ length: 8 }, (_, i) => i + 1).map((n) => h('option', { value: n, selected: n === draft.shared }, n === 1 ? '—' : tf.people(n)))));
   const method = input('method', { placeholder: tf.methodPh, maxlength: 60 });
   const url = input('url', { type: 'url', placeholder: tf.urlPh, maxlength: 300, inputmode: 'url' });
   const notes = (el.notes = h('textarea', { id: 'f-notes', class: 'input', rows: 2, placeholder: tf.notesPh, maxlength: 1000 }, draft.notes || ''));
-  const statusSel = (el.status = h('select', { id: 'f-status', class: 'input input-select' },
-    [['active', t.statusActive], ['paused', t.pausedBadge], ['cancelled', t.cancelledBadge]].map(([v, l]) => h('option', { value: v, selected: v === draft.status }, l))));
-  const toCancel = (el.toCancel = h('input', { id: 'f-toCancel', type: 'checkbox', checked: !!draft.toCancel }));
-  const manual = (el.manual = h('input', { id: 'f-manual', type: 'checkbox', checked: !!draft.manual }));
+  el.status = h('input', { type: 'hidden', id: 'f-status', value: draft.status });
+  const statusSel = h('div', { class: 'seg seg-full', role: 'radiogroup', 'aria-label': tf.status },
+    el.status,
+    [['active', t.statusActive], ['paused', t.pausedBadge], ['cancelled', t.cancelledBadge]].map(([v, l]) => h('button', {
+      type: 'button', role: 'radio', class: 'seg-btn', 'aria-checked': String(v === draft.status), 'aria-pressed': String(v === draft.status),
+      onclick: (e) => {
+        el.status.value = v;
+        for (const b of statusSel.querySelectorAll('.seg-btn')) { const on = b === e.currentTarget; b.setAttribute('aria-checked', String(on)); b.setAttribute('aria-pressed', String(on)); }
+        preview();
+      },
+    }, l)));
+  const toCancel = (el.toCancel = h('input', { id: 'f-toCancel', type: 'checkbox', class: 'switch', role: 'switch', checked: !!draft.toCancel }));
+  const manual = (el.manual = h('input', { id: 'f-manual', type: 'checkbox', class: 'switch', role: 'switch', checked: !!draft.manual }));
   let paidMarks = [...(draft.paid || [])];
   const historyBox = h('div', { class: 'history' });
 
@@ -1105,7 +1195,7 @@ function openForm(sub, preset) {
   const form = h('form', { class: 'sheet-form', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(); }, oninput: preview, onchange: preview },
     h('header', { class: 'sheet-head' },
       h('h2', { id: 'sheet-title' }, isNew ? t.addSub : t.editSub),
-      h('button', { type: 'button', class: 'icon-btn', 'aria-label': tf.cancel, onclick: () => dialog().close() }, icon('close'))),
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': tf.cancel, onclick: () => closeSheet() }, icon('close'))),
     h('div', { class: 'sheet-body' },
       previewBox,
       chips,
@@ -1119,8 +1209,8 @@ function openForm(sub, preset) {
       h('div', { class: 'form-grid' },
         fieldWrap('start', tf.start, start, tf.startHint),
         fieldWrap('category', tf.category, category)),
-      h('label', { class: 'check' }, toCancel, h('span', null, h('strong', null, tf.toCancel), h('span', { class: 'hint' }, ' ' + tf.toCancelHint))),
-      h('label', { class: 'check' }, manual, h('span', null, h('strong', null, t.manual.label), h('span', { class: 'hint' }, ' ' + t.manual.hint))),
+      h('label', { class: 'check' }, h('span', null, h('strong', null, tf.toCancel), h('span', { class: 'hint' }, tf.toCancelHint)), toCancel),
+      h('label', { class: 'check' }, h('span', null, h('strong', null, t.manual.label), h('span', { class: 'hint' }, t.manual.hint)), manual),
       h('details', { class: 'more', open: !isNew && (draft.trialEnd || draft.shared > 1 || draft.method || draft.url || draft.notes || draft.status !== 'active') ? true : null },
         h('summary', null, tf.more),
         h('div', { class: 'more-body' },
@@ -1136,7 +1226,7 @@ function openForm(sub, preset) {
       isNew ? null : historyBox),
     h('footer', { class: 'sheet-foot' },
       !isNew ? h('button', { type: 'button', class: 'btn btn-ghost btn-danger-text', onclick: () => remove(sub) }, icon('trash'), tf.delete) : null,
-      !isNew ? h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => { dialog().close(); openForm(null, { ...sub, id: uid(), name: sub.name + ' 2' }); } }, icon('copy'), h('span', { class: 'hide-sm' }, tf.duplicate)) : null,
+      !isNew ? h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => { closeSheet(); openForm(null, { ...sub, id: uid(), name: sub.name + ' 2' }); } }, icon('copy'), h('span', { class: 'hide-sm' }, tf.duplicate)) : null,
       !isNew && draft.url ? h('a', { class: 'btn btn-ghost', href: draft.url, target: '_blank', rel: 'noopener noreferrer' }, icon('ext'), h('span', { class: 'hide-sm' }, t.actions.open)) : null,
       h('span', { class: 'spacer' }),
       h('button', { type: 'submit', class: 'btn btn-primary' }, tf.save)));
@@ -1162,7 +1252,7 @@ function openForm(sub, preset) {
     if (!clean) return;
     const i = state.subs.findIndex((x) => x.id === clean.id);
     if (i >= 0) state.subs[i] = clean; else state.subs.push(clean);
-    dialog().close();
+    closeSheet();
     commit();
     toast(T().saved);
   }
@@ -1171,6 +1261,8 @@ function openForm(sub, preset) {
   dlg.replaceChildren(form);
   dlg.setAttribute('aria-labelledby', 'sheet-title');
   preview();
+  clearTimeout(ui.sheetTimer);
+  dlg.classList.remove('closing');
   if (!dlg.open) dlg.showModal();
   if (isNew && !preset) setTimeout(() => nameInput.focus(), 30);
 }
@@ -1180,7 +1272,7 @@ function remove(sub) {
   const i = state.subs.findIndex((x) => x.id === sub.id);
   if (i < 0) return;
   const [removed] = state.subs.splice(i, 1);
-  dialog().close();
+  closeSheet();
   commit();
   toast(t.deleted(removed.name), { label: t.undo, fn: () => { state.subs.splice(i, 0, removed); commit(); } });
 }
@@ -1257,7 +1349,7 @@ document.addEventListener('visibilitychange', () => {
 
 $('#add-btn').addEventListener('click', () => openForm());
 $('#head-total-btn').addEventListener('click', () => go('overview'));
-dialog().addEventListener('click', (e) => { if (e.target === dialog()) dialog().close(); });
+dialog().addEventListener('click', (e) => { if (e.target === dialog()) closeSheet(); });
 
 // refresh at midnight so "today" stays right on a long-open tab
 setInterval(() => {
@@ -1283,7 +1375,7 @@ if (N.isNative()) {
     if (ui.view === 'prefs') render();
   });
   N.onBackButton(() => {
-    if (dialog().open) { dialog().close(); return; }
+    if (dialog().open) { closeSheet(); return; }
     if (ui.view !== 'overview') { go('overview'); return; }
     N.minimizeApp();
   });

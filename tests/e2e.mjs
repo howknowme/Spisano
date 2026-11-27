@@ -49,6 +49,7 @@ try {
   await page.locator('.history-list .h-mark').first().click();
   assert.equal(await page.locator('.history-list .h-mark.is-paid').count() >= 1, true);
   await page.click('button[type=submit]');
+  await page.waitForSelector('#sheet', { state: 'hidden' });
 
   // budget: tiny budget → over-budget alert
   await page.goto(base + '#prefs');
@@ -70,6 +71,7 @@ try {
   assert.equal(await page.inputValue('#f-price'), '15.49');
   await page.fill('#f-price', '10');
   await page.click('button[type=submit]');
+  await page.waitForSelector('#sheet', { state: 'hidden' });
   await page.waitForSelector('.hero');
   const total = await page.textContent('.hero-num');
   assert.ok(total.includes('$') || /\d/.test(total), 'hero shows total');
@@ -82,6 +84,7 @@ try {
   await page.fill('#f-price', '3000');
   await page.selectOption('#f-currency', 'RUB');
   await page.click('button[type=submit]');
+  await page.waitForSelector('#sheet', { state: 'hidden' });
 
   // list + search
   await page.goto(base + '#subs');
@@ -99,6 +102,7 @@ try {
   // delete + undo
   await page.locator('.sub-main').first().click();
   await page.click('.sheet-foot >> text=Удалить');
+  await page.waitForSelector('#sheet', { state: 'hidden' });
   assert.equal(await page.locator('.sub').count(), 1);
   await page.click('#toast >> text=Отменить');
   assert.equal(await page.locator('.sub').count(), 2);
