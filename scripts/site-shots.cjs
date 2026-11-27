@@ -24,15 +24,6 @@ const base = 'http://localhost:8771/';
     await shot('reminders', 'overview', () => p.evaluate(() => { const el = document.querySelector('.alerts'); scrollTo(0, el.getBoundingClientRect().top + scrollY - 76); }));
     await shot('calendar', 'calendar');
     await shot('forecast', 'overview', () => toCard('Списания по месяцам'));
-    await shot('family', 'subs', async () => {
-      await p.locator('.sub-main', { hasText: 'Spotify' }).first().click(); await p.waitForTimeout(500);
-      await p.evaluate(() => { const d = document.querySelector('.more'); d.open = true; const body = document.querySelector('.sheet-body'); const f = document.querySelector('#f-shared'); body.scrollTop = f.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 260; });
-    });
-    await shot('bills', 'subs', async () => {
-      await p.click('.seg-btn:has-text("Все")');
-      await p.locator('.sub-main', { hasText: 'Коммунальные' }).first().click(); await p.waitForTimeout(500);
-      await p.evaluate(() => { const body = document.querySelector('.sheet-body'); const h = document.querySelector('.history'); body.scrollTop = h.offsetTop - body.offsetTop - 140; });
-    });
     await ctx.close();
   }
   await b.close();

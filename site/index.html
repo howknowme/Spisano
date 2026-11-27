@@ -4,286 +4,278 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Списано — трекер подписок</title>
-<meta name="description" content="Трекер подписок и регулярных платежей. Показывает, сколько уходит в месяц, и напоминает до списания. Бесплатно, без регистрации и рекламы.">
+<meta name="description" content="Трекер подписок и регулярных платежей. Показывает, сколько уходит в месяц, и напоминает за день до списания. Бесплатно, без регистрации и рекламы.">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta property="og:title" content="Списано — трекер подписок">
-<meta property="og:description" content="Сколько на самом деле уходит на подписки. Напоминания до списания. Без регистрации.">
+<meta property="og:description" content="Напоминает о подписке за день до списания. Без регистрации и рекламы.">
 <meta property="og:image" content="https://howknowme.github.io/Spisano/img/og.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="fonts/fonts.css">
 <script>
-  // An installed web app (opened from the home screen) goes straight to the app, not the landing page.
+  // Opened from the home screen as an installed web app: go straight to the app.
   if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) location.replace('app/');
 </script>
 <style>
-  /* Layout: one idea per screen, centred hero, then text-left / phone-right rows; the bank notification is the one loud moment. */
   :root {
-    --bg: #ffffff;
-    --bg-alt: #f3f4f7;
-    --ink: #15171d;
-    --muted: #6b7080;
-    --line: #e2e4ea;
-    --accent: #2f46d0;
-    --accent-ink: #ffffff;
-    --bezel: #15171d;
-    --note: rgba(246, 247, 250, .82);
-    --note-edge: rgba(0, 0, 0, .06);
-    --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --font-brand: "Unbounded", "Manrope", system-ui, sans-serif;
-    --gutter-l: max(20px, env(safe-area-inset-left, 0px));
-    --gutter-r: max(20px, env(safe-area-inset-right, 0px));
+    --paper: #ffffff;
+    --mist: #f5f5f7;
+    --ink: #1d1d1f;
+    --quiet: #6e6e73;
+    --rule: #d2d2d7;
+    --blue: #2f46d0;
+    --on-blue: #ffffff;
+    --glass: rgba(255, 255, 255, .72);
+    --glass-edge: rgba(0, 0, 0, .07);
+    --frame: #2b2c30;
+    --sans: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --gl: max(22px, env(safe-area-inset-left, 0px));
+    --gr: max(22px, env(safe-area-inset-right, 0px));
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #000000; --bg-alt: #101216; --ink: #f2f3f6; --muted: #9298a6; --line: #24272f;
-      --accent: #8796ff; --accent-ink: #0b0c10; --bezel: #2a2d35; --note: rgba(40, 43, 52, .78); --note-edge: rgba(255, 255, 255, .08);
+      --paper: #000000; --mist: #161617; --ink: #f5f5f7; --quiet: #86868b; --rule: #333336;
+      --blue: #8796ff; --on-blue: #000000; --glass: rgba(44, 44, 48, .7); --glass-edge: rgba(255, 255, 255, .09); --frame: #3a3b40;
       color-scheme: dark;
     }
   }
 
   *, *::before, *::after { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 500 17px/1.55 var(--font); -webkit-font-smoothing: antialiased; overflow-x: clip; }
-  img { max-width: 100%; display: block; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 500 19px/1.47 var(--sans); letter-spacing: -.011em;
+         -webkit-font-smoothing: antialiased; overflow-x: clip; }
+  img { display: block; max-width: 100%; }
   a { color: inherit; }
-  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
+  p { margin: 0; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; border-radius: 6px; }
+  .wrap { width: 100%; max-width: 1120px; margin-inline: auto; padding-left: var(--gl); padding-right: var(--gr); }
 
-  /* ---------- top bar ---------- */
-  .bar { position: sticky; top: 0; z-index: 10; background: color-mix(in oklab, var(--bg) 78%, transparent);
-         -webkit-backdrop-filter: saturate(1.8) blur(18px); backdrop-filter: saturate(1.8) blur(18px); border-bottom: 1px solid color-mix(in oklab, var(--line) 70%, transparent); }
-  .bar .wrap { display: flex; align-items: center; gap: 28px; height: 56px; }
-  .mark { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 700 19px var(--font-brand); letter-spacing: -.02em; }
-  .mark svg { width: 28px; height: 28px; border-radius: 8px; }
-  .bar nav { display: flex; gap: 24px; margin-left: auto; font-size: 14px; font-weight: 600; }
-  .bar nav a { text-decoration: none; color: var(--muted); }
-  .bar nav a:hover { color: var(--ink); }
-  .bar .get { font-size: 14px; padding: 7px 14px; }
-  @media (max-width: 620px) { .bar nav { display: none; } .bar .get { margin-left: auto; } }
+  /* type scale: 19 body, 24 lead, 40 / 56 / 80 headlines, all from one family */
+  h1, h2, h3 { margin: 0; font-weight: 800; text-wrap: balance; }
+  h2 { font-size: clamp(40px, 6.2vw, 64px); line-height: 1.05; letter-spacing: -.042em; }
+  h3 { font-size: clamp(30px, 3.6vw, 40px); line-height: 1.1; letter-spacing: -.035em; }
+  .lead { font-size: clamp(21px, 2.2vw, 24px); line-height: 1.4; letter-spacing: -.02em; color: var(--quiet); font-weight: 600; text-wrap: pretty; }
 
-  /* ---------- buttons ---------- */
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
-         font: 700 16px var(--font); text-decoration: none; transition: transform .2s cubic-bezier(.3, 1.4, .5, 1), background-color .2s; }
+  /* ---------- bar ---------- */
+  .bar { position: sticky; top: 0; z-index: 20; height: 52px; background: color-mix(in oklab, var(--paper) 80%, transparent);
+         -webkit-backdrop-filter: saturate(1.8) blur(20px); backdrop-filter: saturate(1.8) blur(20px); }
+  .bar .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 9px; text-decoration: none; font: 700 17px/1 "Unbounded", var(--sans); letter-spacing: -.02em; }
+  .logo svg { width: 24px; height: 24px; }
+  .bar .btn { padding: 6px 14px; font-size: 14px; }
+
+  .btn { display: inline-flex; align-items: center; border-radius: 980px; padding: 12px 22px; font: 700 17px/1.2 var(--sans); letter-spacing: -.01em;
+         text-decoration: none; background: var(--blue); color: var(--on-blue); transition: transform .25s cubic-bezier(.3, 1.5, .5, 1); }
+  .btn:hover { background: color-mix(in oklab, var(--blue) 90%, var(--ink)); }
   .btn:active { transform: scale(.96); }
-  .btn-primary { background: var(--accent); color: var(--accent-ink); }
-  .btn-primary:hover { background: color-mix(in oklab, var(--accent) 88%, var(--ink)); }
-  .btn-quiet { color: var(--accent); }
-  .btn-quiet:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .link { color: var(--blue); font-weight: 700; font-size: 17px; text-decoration: none; }
+  .link:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 26px; }
 
-  /* ---------- hero ---------- */
-  .hero { text-align: center; padding-top: clamp(48px, 9vw, 96px); overflow: hidden; }
-  .note { width: min(100%, 380px); margin: 0 auto 40px; display: flex; gap: 12px; align-items: center; text-align: left;
-          padding: 14px 16px; border-radius: 22px; background: var(--note); box-shadow: 0 0 0 1px var(--note-edge), 0 18px 40px -18px rgba(0, 0, 0, .35);
-          -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
-  .note-ico { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: #1f9d55; color: #fff; }
-  .note-ico svg { width: 20px; height: 20px; }
-  .note-body { min-width: 0; flex: 1; font-size: 14px; line-height: 1.35; }
-  .note-top { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
-  .note-title { font-weight: 800; font-size: 15px; }
-  .note-title b { font-weight: 800; }
-  h1 { margin: 0; font: 700 clamp(58px, 13vw, 148px)/.95 var(--font-brand); letter-spacing: -.045em; }
-  .lede { margin: 14px 0 0; font: 700 clamp(26px, 4.4vw, 44px)/1.15 var(--font); letter-spacing: -.03em; color: var(--muted); text-wrap: balance; }
-  .intro { max-width: 34em; margin: 26px auto 0; color: var(--muted); font-size: 19px; text-wrap: pretty; }
-  .ctas { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 20px; margin-top: 32px; }
-  .fine { margin: 16px 0 0; color: var(--muted); font-size: 14px; }
+  /* ---------- hero: the notifications nobody reads ---------- */
+  .hero { padding-block: clamp(40px, 8vw, 110px) clamp(72px, 10vw, 140px); }
+  .hero .wrap { display: grid; gap: 56px; align-items: center; }
+  @media (min-width: 900px) { .hero .wrap { grid-template-columns: minmax(0, 1fr) 400px; gap: 56px; } }
+  h1 { font-size: clamp(72px, 10.5vw, 136px); line-height: .9; letter-spacing: -.062em; margin-left: -.04em; }
+  .hero .lead { margin-top: 28px; max-width: 21em; }
+  .hero .actions { margin-top: 36px; }
+  .small { margin-top: 18px; font-size: 14px; color: var(--quiet); }
 
-  /* the phone */
-  .phone { position: relative; width: 300px; max-width: 100%; aspect-ratio: 390 / 844; border-radius: 48px; padding: 10px; background: var(--bezel);
-           box-shadow: 0 50px 90px -40px rgba(20, 30, 90, .55), 0 0 0 1px rgba(255, 255, 255, .06) inset; }
-  .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 38px; }
-  .hero .phone { width: 340px; margin: 56px auto -170px; }
+  .stack { list-style: none; margin: 0; padding: 0; display: grid; width: 100%; max-width: 400px; justify-self: center; }
+  .stack li { display: grid; grid-template-rows: 1fr; }
+  .stack li > div { min-height: 0; }
+  .n { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; padding: 13px 15px; border-radius: 22px; background: var(--glass);
+       box-shadow: 0 0 0 .5px var(--glass-edge), 0 10px 30px -14px rgba(0, 0, 0, .28); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); }
+  .n-icon { flex: none; width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; background: #21a038; color: #fff; }
+  .n-icon svg { width: 21px; height: 21px; }
+  .n-text { flex: 1; min-width: 0; font-size: 15px; line-height: 1.3; letter-spacing: -.01em; }
+  .n-head { display: flex; justify-content: space-between; gap: 8px; }
+  .n-head b { font-weight: 800; }
+  .n-head span { color: var(--quiet); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .n-text p { color: var(--quiet); font-weight: 600; }
+  /* older charges fade, the way you forget them */
+  .stack li:nth-child(2) { opacity: .82; } .stack li:nth-child(3) { opacity: .64; }
+  .stack li:nth-child(4) { opacity: .46; } .stack li:nth-child(5) { opacity: .3; }
 
-  /* load sequence: the bank notification drops in, then the name, then the phone rises */
   @media (prefers-reduced-motion: no-preference) {
-    .note { animation: drop .7s cubic-bezier(.2, 1.2, .4, 1) .15s both; }
-    .hero h1, .hero .lede { animation: rise .7s cubic-bezier(.2, .8, .2, 1) .55s both; }
-    .hero .intro, .hero .ctas, .hero .fine { animation: rise .7s cubic-bezier(.2, .8, .2, 1) .7s both; }
-    .hero .phone { animation: rise 1s cubic-bezier(.2, .8, .2, 1) .85s both; }
+    .stack li { animation: open .55s cubic-bezier(.3, 1.25, .5, 1) both; animation-delay: calc(var(--d) * .42s + .2s); }
+    .stack li > div { animation: drop .55s cubic-bezier(.3, 1.25, .5, 1) both; animation-delay: inherit; }
   }
-  @keyframes drop { from { transform: translateY(-36px) scale(.96); opacity: 0; } }
-  @keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+  @keyframes open { from { grid-template-rows: 0fr; } }
+  @keyframes drop { from { transform: translateY(-14px) scale(.94); opacity: 0; } }
 
-  /* ---------- sections ---------- */
-  section { padding-block: clamp(80px, 12vw, 150px); }
-  .alt { background: var(--bg-alt); }
-  h2 { margin: 0; font: 700 clamp(36px, 6vw, 64px)/1.04 var(--font); letter-spacing: -.035em; text-wrap: balance; }
-  .copy p { margin: 22px 0 0; max-width: 30em; color: var(--muted); font-size: 19px; text-wrap: pretty; }
-  .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 56px; align-items: center; }
-  .row .phone { margin: 0 auto; }
-  @media (min-width: 860px) { .row { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 80px; } }
+  /* ---------- phone ---------- */
+  .phone { position: relative; width: 300px; max-width: 100%; aspect-ratio: 390 / 844; padding: 9px; border-radius: 50px; background: #000;
+           box-shadow: 0 0 0 1.5px var(--frame), 0 0 0 3px #000, 0 40px 80px -36px rgba(15, 25, 80, .5); }
+  .phone::after { content: ""; position: absolute; top: 19px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #0a0a0a;
+                  box-shadow: 0 0 0 2px #000; }
+  .phone img, .phone picture { width: 100%; height: 100%; }
+  .phone img { object-fit: cover; object-position: top; border-radius: 41px; }
 
-  /* the number */
-  .figure { text-align: center; }
-  .big { font: 800 clamp(72px, 16vw, 190px)/.9 var(--font); letter-spacing: -.055em; font-variant-numeric: tabular-nums; }
-  .big { white-space: nowrap; }
-  .big small { font-size: .32em; white-space: nowrap; letter-spacing: -.02em; color: var(--muted); font-weight: 700; }
-  @media (max-width: 620px) { .big small { display: block; font-size: .3em; margin-top: 10px; } }
-  .figure p { max-width: 30em; margin: 26px auto 0; color: var(--muted); font-size: 19px; }
+  /* ---------- the sum ---------- */
+  .sum { background: var(--mist); padding-top: clamp(88px, 11vw, 140px); overflow: hidden; text-align: center; }
+  .sum .lead { margin: 22px auto 0; max-width: 26em; }
+  .sum .phone { width: 360px; margin: 72px auto -230px; }
+  .sum .tail { height: 230px; }
 
-  /* reminder with a floating notification over the phone */
-  .stack { position: relative; width: 300px; max-width: 100%; margin: 0 auto; }
-  .stack .note { position: absolute; left: -36px; right: -36px; top: 92px; width: auto; margin: 0; animation: none; }
-  .stack .note-ico { background: var(--accent); }
-  .stack .note-ico svg { width: 22px; height: 22px; }
-  @media (max-width: 420px) { .stack .note { left: -8px; right: -8px; } }
+  /* ---------- story: copy scrolls, the phone stays ---------- */
+  .story { padding-block: clamp(96px, 12vw, 150px) clamp(40px, 6vw, 80px); }
+  .story-grid { display: grid; gap: 96px; }
+  .step .lead { margin-top: 18px; max-width: 22em; }
+  .step .phone { margin: 48px auto 0; }
+  .stage { display: none; }
+  @media (min-width: 900px) {
+    .story-grid { grid-template-columns: 1fr 340px; gap: 64px; align-items: start; }
+    .steps { display: grid; }
+    .step { min-height: 86vh; display: flex; flex-direction: column; justify-content: center; opacity: .3; transition: opacity .5s; }
+    .step.on { opacity: 1; }
+    .step .phone { display: none; }
+    .stage { display: block; position: sticky; top: max(72px, calc(50vh - 340px)); }
+    .stage .phone { width: 320px; }
+    .stage picture { position: absolute; inset: 9px; width: auto; height: auto; opacity: 0; transition: opacity .6s ease; }
+    .stage picture.on { opacity: 1; }
+  }
+  @media (min-width: 900px) and (prefers-reduced-motion: reduce) { .step, .stage picture { transition: none; } }
 
-  /* strip of four screens */
-  .strip-head { max-width: 720px; }
-  .strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 28px; margin-top: 56px;
-           overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; scrollbar-width: none; }
-  .strip::-webkit-scrollbar { display: none; }
-  .strip figure { margin: 0; scroll-snap-align: start; }
-  .strip .phone { width: 100%; border-radius: 40px; padding: 8px; }
-  .strip .phone img { border-radius: 32px; }
-  .strip figcaption { margin-top: 18px; font-size: 16px; color: var(--muted); }
-  .strip figcaption b { display: block; color: var(--ink); font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+  /* ---------- details: a plain list ---------- */
+  .details { padding-block: clamp(88px, 11vw, 140px); background: var(--mist); }
+  .details dl { margin: 56px 0 0; display: grid; column-gap: 64px; }
+  @media (min-width: 760px) { .details dl { grid-template-columns: 1fr 1fr; } }
+  .details dl > div { padding-block: 22px 26px; border-top: 1px solid var(--rule); }
+  .details dt { font-size: 21px; font-weight: 800; letter-spacing: -.025em; }
+  .details dd { margin: 6px 0 0; color: var(--quiet); max-width: 26em; }
 
-  /* privacy, the dark room */
-  .private { background: #000; color: #f2f3f6; }
-  .private h2 { max-width: 12em; }
-  .private ul { list-style: none; margin: 48px 0 0; padding: 0; display: grid; gap: 4px; max-width: 640px; }
-  .private li { font: 700 clamp(22px, 3.2vw, 32px)/1.3 var(--font); letter-spacing: -.02em; color: #f2f3f6; }
-  .private li span { color: #8d93a3; }
-  .private .more { display: inline-block; margin-top: 40px; color: #8796ff; font-weight: 700; text-decoration: none; }
-  .private .more:hover { text-decoration: underline; text-underline-offset: 4px; }
+  /* ---------- privacy ---------- */
+  .private { background: #000; color: #f5f5f7; padding-block: clamp(110px, 14vw, 180px); }
+  .private h2 { font-size: clamp(44px, 7.4vw, 80px); max-width: 11em; }
+  .private ul { list-style: none; margin: 64px 0 0; padding: 0; display: grid; gap: 30px; max-width: 760px; }
+  @media (min-width: 760px) { .private ul { grid-template-columns: 1fr 1fr; gap: 40px 64px; } }
+  .private li { font-size: 19px; color: #86868b; }
+  .private li b { display: block; color: #f5f5f7; font-size: 24px; letter-spacing: -.025em; font-weight: 800; margin-bottom: 4px; }
+  .private .link { display: inline-block; margin-top: 64px; color: #8796ff; }
 
-  /* final */
-  .final { text-align: center; }
-  .final p { color: var(--muted); font-size: 17px; margin: 18px auto 0; max-width: 34em; }
-
-  footer { border-top: 1px solid var(--line); padding-block: 28px calc(28px + env(safe-area-inset-bottom, 0px)); color: var(--muted); font-size: 14px; }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
-  footer nav { display: flex; gap: 20px; }
+  /* ---------- end ---------- */
+  .end { padding-block: clamp(110px, 14vw, 170px); text-align: center; }
+  .end .actions { justify-content: center; margin-top: 40px; }
+  .end .small { max-width: 30em; margin-inline: auto; margin-top: 24px; }
+  footer { padding-block: 20px calc(24px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--quiet); }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; border-top: 1px solid var(--rule); padding-top: 18px; }
+  footer nav { display: flex; gap: 22px; }
   footer a { text-decoration: none; }
-  footer a:hover { color: var(--ink); }
+  footer a:hover { color: var(--ink); text-decoration: underline; }
 </style>
 </head>
 <body>
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="./" aria-label="Списано, на главную">
-      <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="120" fill="#2f46d0"/><path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="50" stroke-linecap="round"/><circle cx="372" cy="256" r="36" fill="#f2a600"/></svg>
+    <a class="logo" href="./">
+      <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="116" fill="#2f46d0"/><path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="50" stroke-linecap="round"/><circle cx="372" cy="256" r="36" fill="#f2a600"/></svg>
       Списано
     </a>
-    <nav aria-label="Разделы">
-      <a href="#features">Возможности</a>
-      <a href="#privacy">Приватность</a>
-    </nav>
-    <a class="btn btn-primary get" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать</a>
+    <a class="btn" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать</a>
   </div>
 </header>
 
 <main>
-  <div class="hero">
+  <section class="hero">
     <div class="wrap">
-      <div class="note" role="img" aria-label="Уведомление банка: списано 399 рублей, OKKO, подписка">
-        <div class="note-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h3"/></svg></div>
-        <div class="note-body">
-          <div class="note-top"><span>Банк</span><span>сейчас</span></div>
-          <div class="note-title"><b>Списано</b> 399 ₽</div>
-          <div>OKKO, подписка</div>
+      <div>
+        <h1>Списано.</h1>
+        <p class="lead">Так банк сообщает о подписке, про которую ты забыл. Приложение «Списано» скажет об этом за день до.</p>
+        <div class="actions">
+          <a class="btn" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать для Android</a>
+          <a class="link" href="app/">Открыть в браузере</a>
         </div>
+        <p class="small">Бесплатно. Без регистрации и рекламы.</p>
       </div>
-      <h1>Списано.</h1>
-      <p class="lede">Только теперь — заранее.</p>
-      <p class="intro">Трекер подписок и регулярных платежей. Показывает, сколько на самом деле уходит каждый месяц, и напоминает за день до списания.</p>
-      <div class="ctas">
-        <a class="btn btn-primary" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать для Android</a>
-        <a class="btn btn-quiet" href="app/">Открыть в браузере</a>
-      </div>
-      <p class="fine">Бесплатно. Без регистрации и рекламы.</p>
+
+      <ul class="stack" aria-label="Уведомления банка о списаниях">
+        <li style="--d:4"><div class="n"><div class="n-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M7 15h3"/></svg></div><div class="n-text"><div class="n-head"><b>Списано 399 ₽</b><span>сейчас</span></div><p>Okko, подписка</p></div></div></li>
+        <li style="--d:3"><div class="n"><div class="n-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M7 15h3"/></svg></div><div class="n-text"><div class="n-head"><b>Списано 650 ₽</b><span>вчера</span></div><p>Мобильная связь</p></div></div></li>
+        <li style="--d:2"><div class="n"><div class="n-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M7 15h3"/></svg></div><div class="n-text"><div class="n-head"><b>Списано 399 ₽</b><span>4 дня назад</span></div><p>Яндекс Плюс</p></div></div></li>
+        <li style="--d:1"><div class="n"><div class="n-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M7 15h3"/></svg></div><div class="n-text"><div class="n-head"><b>Списано 700 ₽</b><span>неделю назад</span></div><p>Домашний интернет</p></div></div></li>
+        <li style="--d:0"><div class="n"><div class="n-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M7 15h3"/></svg></div><div class="n-text"><div class="n-head"><b>Списано 2 990 ₽</b><span>2 недели назад</span></div><p>Спортзал</p></div></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sum">
+    <div class="wrap">
+      <h2>Сколько уходит на самом деле.</h2>
+      <p class="lead">Все подписки и регулярные платежи в одной сумме: в месяц, в год и в день. Валюты пересчитываются сами.</p>
       <div class="phone">
-        <picture>
-          <source srcset="img/overview-dark.jpg" media="(prefers-color-scheme: dark)">
-          <img src="img/overview-light.jpg" alt="Главный экран: 13 833 ₽ в месяц, бюджет, сколько можно сэкономить" width="390" height="844">
-        </picture>
+        <picture><source srcset="img/overview-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/overview-light.jpg" alt="Главный экран: 13 833 ₽ в месяц, 166 001 ₽ в год, 454 ₽ в день" width="390" height="844"></picture>
       </div>
     </div>
-  </div>
-
-  <section class="alt figure" id="features">
-    <div class="wrap">
-      <h2>Одна цифра, которую стоит знать.</h2>
-      <div class="big" style="margin-top:48px">13 833 ₽<small> в месяц</small></div>
-      <p>Столько выходит у примера в приложении: кино, музыка, облако, связь, интернет, спортзал. Добавь свои подписки, и «Списано» посчитает твою сумму — в месяц, в год и в день, в любой валюте.</p>
-    </div>
+    <div class="tail"></div>
   </section>
 
-  <section>
-    <div class="wrap row">
-      <div class="copy">
-        <h2>Напомнит за день. Даже если приложение закрыто.</h2>
-        <p>Пробный период, который вот-вот станет платным. Списание за связь. Коммуналка, которую пора оплатить. Ты узнаешь об этом раньше банка.</p>
-      </div>
-      <div class="stack">
-        <div class="phone">
-          <picture>
-            <source srcset="img/reminders-dark.jpg" media="(prefers-color-scheme: dark)">
-            <img src="img/reminders-light.jpg" alt="Напоминания: коммуналка не оплачена, списание за связь завтра, пробный период заканчивается" width="390" height="844" loading="lazy">
-          </picture>
-        </div>
-        <div class="note" role="img" aria-label="Уведомление «Списано»: пробный период Okko закончится завтра">
-          <div class="note-ico"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round"/><circle cx="372" cy="256" r="40" fill="#f2a600"/></svg></div>
-          <div class="note-body">
-            <div class="note-top"><span>Списано</span><span>завтра</span></div>
-            <div class="note-title">Пробный период закончится</div>
-            <div>Okko, 399 ₽ в месяц</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="alt">
-    <div class="wrap">
-      <div class="strip-head">
-        <h2>Всё, что приходит каждый месяц.</h2>
-      </div>
-      <div class="strip">
-        <figure>
-          <div class="phone"><picture><source srcset="img/calendar-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/calendar-light.jpg" alt="Календарь списаний за месяц" width="390" height="844" loading="lazy"></picture></div>
-          <figcaption><b>Календарь</b>Каждое списание на своём дне, с суммой.</figcaption>
-        </figure>
-        <figure>
+  <section class="story">
+    <div class="wrap story-grid">
+      <div class="steps">
+        <article class="step on" data-shot="0">
+          <h3>Напомнит заранее.</h3>
+          <p class="lead">За день до списания, даже если приложение закрыто. И за день до конца пробного периода, пока его ещё можно отменить.</p>
+          <div class="phone"><picture><source srcset="img/reminders-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/reminders-light.jpg" alt="Напоминания и ближайшие списания на 30 дней" width="390" height="844" loading="lazy"></picture></div>
+        </article>
+        <article class="step" data-shot="1">
+          <h3>Весь месяц на одном экране.</h3>
+          <p class="lead">Каждое списание стоит на своём дне. Сразу видно, на какую неделю приходится больше всего.</p>
+          <div class="phone"><picture><source srcset="img/calendar-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/calendar-light.jpg" alt="Календарь списаний за ноябрь" width="390" height="844" loading="lazy"></picture></div>
+        </article>
+        <article class="step" data-shot="2">
+          <h3>И год вперёд.</h3>
+          <p class="lead">Годовые подписки больше не застают врасплох: прогноз показывает, в каком месяце они придут.</p>
           <div class="phone"><picture><source srcset="img/forecast-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/forecast-light.jpg" alt="Прогноз списаний на 12 месяцев" width="390" height="844" loading="lazy"></picture></div>
-          <figcaption><b>Прогноз на год</b>Видно месяцы, когда приходят годовые оплаты.</figcaption>
-        </figure>
-        <figure>
-          <div class="phone"><picture><source srcset="img/family-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/family-light.jpg" alt="Семейный тариф: делю с двумя людьми" width="390" height="844" loading="lazy"></picture></div>
-          <figcaption><b>Семейные тарифы</b>Делишь подписку — считается только твоя доля.</figcaption>
-        </figure>
-        <figure>
-          <div class="phone"><picture><source srcset="img/bills-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/bills-light.jpg" alt="История платежей за коммунальные услуги" width="390" height="844" loading="lazy"></picture></div>
-          <figcaption><b>ЖКХ и аренда</b>Отмечаешь «Оплачено», и долги видно сразу.</figcaption>
-        </figure>
+        </article>
       </div>
+      <div class="stage" aria-hidden="true">
+        <div class="phone">
+          <picture class="on"><source srcset="img/reminders-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/reminders-light.jpg" alt="" width="390" height="844" loading="lazy"></picture>
+          <picture><source srcset="img/calendar-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/calendar-light.jpg" alt="" width="390" height="844" loading="lazy"></picture>
+          <picture><source srcset="img/forecast-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/forecast-light.jpg" alt="" width="390" height="844" loading="lazy"></picture>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="details">
+    <div class="wrap">
+      <h2>Для всего, что приходит регулярно.</h2>
+      <dl>
+        <div><dt>Семейные тарифы</dt><dd>Делишь подписку с кем-то, и в расходы попадает только твоя доля.</dd></div>
+        <div><dt>ЖКХ и аренда</dt><dd>Отмечаешь «Оплачено», и сразу видно, что ещё не оплачено.</dd></div>
+        <div><dt>Бюджет</dt><dd>Задаёшь лимит на месяц и видишь, сколько от него осталось.</dd></div>
+        <div><dt>Больше 40 валют</dt><dd>Рубли, леи, евро, доллары и другие. Курсы обновляются по кнопке.</dd></div>
+        <div><dt>Экспорт</dt><dd>Таблица для Excel и файл календаря для Google или Apple.</dd></div>
+        <div><dt>Резервная копия</dt><dd>Один файл, который переносит всё на новый телефон.</dd></div>
+      </dl>
     </div>
   </section>
 
   <section class="private" id="privacy">
     <div class="wrap">
-      <h2>Твои подписки — твоё дело.</h2>
+      <h2>Что ты тратишь, знаешь только ты.</h2>
       <ul>
-        <li>Нет регистрации. <span>Открыл и пользуешься.</span></li>
-        <li>Нет доступа к банку. <span>Ни к картам, ни к СМС, ни к почте.</span></li>
-        <li>Нет рекламы и аналитики. <span>Никто не смотрит, на что ты тратишь.</span></li>
-        <li>Всё хранится на телефоне. <span>И работает без интернета.</span></li>
+        <li><b>Без регистрации.</b>Открыл и пользуешься, ни почты, ни пароля.</li>
+        <li><b>Без доступа к банку.</b>Ни к картам, ни к СМС. Платежи ты добавляешь сам.</li>
+        <li><b>Без рекламы и слежки.</b>В приложении нет аналитики и трекеров.</li>
+        <li><b>Только на телефоне.</b>Данные никуда не отправляются, приложение работает без интернета.</li>
       </ul>
-      <a class="more" href="privacy.html">Политика конфиденциальности</a>
+      <a class="link" href="privacy.html">Политика конфиденциальности</a>
     </div>
   </section>
 
-  <section class="final">
+  <section class="end">
     <div class="wrap">
-      <h2>Узнай, сколько уходит у тебя.</h2>
-      <div class="ctas">
-        <a class="btn btn-primary" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать для Android</a>
-        <a class="btn btn-quiet" href="app/">Открыть в браузере</a>
+      <h2>Проверь свои подписки.</h2>
+      <div class="actions">
+        <a class="btn" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать для Android</a>
+        <a class="link" href="app/">Открыть в браузере</a>
       </div>
-      <p>Нужен Android 7 или новее. На iPhone открой сайт в Safari и добавь его на экран «Домой».</p>
+      <p class="small">Android 7 или новее. На iPhone открой сайт в Safari и нажми «Поделиться», затем «На экран „Домой“».</p>
     </div>
   </section>
 </main>
@@ -299,12 +291,21 @@
 </footer>
 
 <script>
-  // The site used to be the app itself: drop that old service worker so the landing page isn't served from its cache.
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => {
-      if (!/\/app\/$/.test(r.scope)) r.unregister();
-    })).catch(() => {});
-  }
+  // Story: the step in the middle of the screen picks the phone's screen.
+  const steps = document.querySelectorAll('.step');
+  const shots = document.querySelectorAll('.stage picture');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const i = +e.target.dataset.shot;
+      steps.forEach((s) => s.classList.toggle('on', s === e.target));
+      shots.forEach((p, k) => p.classList.toggle('on', k === i));
+    }), { rootMargin: '-45% 0px -45% 0px' });
+    steps.forEach((s) => io.observe(s));
+  } else steps.forEach((s) => s.classList.add('on'));
+
+  // The site used to be the app itself: remove that old service worker so this page isn't served from its cache.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => { if (!/\/app\/$/.test(r.scope)) r.unregister(); })).catch(() => {});
 </script>
 </body>
 </html>
