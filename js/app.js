@@ -928,11 +928,11 @@ function viewPrefs() {
       clearBtn));
 
   const about = h('section', { class: 'card' }, h('h2', null, tp.about), h('p', null, tp.aboutText),
-    h('p', null, h('a', { href: 'https://howknowme.github.io/subly/privacy.html' + (state.prefs.lang === 'en' ? '#en' : ''), target: '_blank', rel: 'noopener' }, tp.privacy)),
+    h('p', null, h('a', { href: 'https://howknowme.github.io/Spisano/privacy.html' + (state.prefs.lang === 'en' ? '#en' : ''), target: '_blank', rel: 'noopener' }, tp.privacy)),
     N.isNative() ? null : h('p', { class: 'hint' }, tp.shortcuts),
     ui.installEvt ? h('div', { class: 'row-wrap' }, h('button', { type: 'button', class: 'btn btn-primary', onclick: install }, icon('down'), tp.install), h('span', { class: 'hint' }, tp.installHint)) : null,
     N.isNative() ? null : h('div', { class: 'row-wrap' },
-      h('a', { class: 'btn', href: 'https://github.com/howknowme/subly/releases/latest/download/subly.apk', target: '_blank', rel: 'noopener' }, icon('down'), tp.android),
+      h('a', { class: 'btn', href: 'https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk', target: '_blank', rel: 'noopener' }, icon('down'), tp.android),
       h('span', { class: 'hint' }, tp.androidHint)));
 
   return h('div', { class: 'stack prefs' }, general, reminders, rates, data, about);

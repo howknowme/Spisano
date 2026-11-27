@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://howknowme.github.io/subly/"><b>Открыть в браузере</b></a>
+  <a href="https://howknowme.github.io/Spisano/"><b>Открыть в браузере</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/howknowme/subly/releases/latest/download/subly.apk"><b>Скачать для Android (APK)</b></a>
+  <a href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk"><b>Скачать для Android (APK)</b></a>
 </p>
 
 <p align="center">
@@ -75,7 +75,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 
 ### Android: приложение (рекомендуется)
 
-1. Скачайте **[subly.apk](https://github.com/howknowme/subly/releases/latest/download/subly.apk)** (все версии в [Releases](https://github.com/howknowme/subly/releases)).
+1. Скачайте **[subly.apk](https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk)** (все версии в [Releases](https://github.com/howknowme/Spisano/releases)).
 2. Откройте файл и разрешите установку из этого источника, когда Android спросит.
 3. Нажмите **Установить**.
 
@@ -88,7 +88,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 
 ### iPhone и любой браузер
 
-Откройте [howknowme.github.io/subly](https://howknowme.github.io/subly/):
+Откройте [howknowme.github.io/Spisano](https://howknowme.github.io/Spisano/):
 - **iPhone (Safari):** «Поделиться» → «На экран „Домой“».
 - **Android (Chrome):** меню ⋮ → «Установить приложение».
 
@@ -97,7 +97,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 Чистые HTML, CSS и JavaScript-модули: без фреймворков, без сборки, без зависимостей.
 
 ```bash
-git clone https://github.com/howknowme/subly
+git clone https://github.com/howknowme/Spisano
 cd subly
 npm start          # http://localhost:8080
 npm test           # юнит-тесты логики (node:test)
@@ -135,7 +135,7 @@ APK подписывается ключом `android/app/subly-sideload.keystore
 
 ## Политика конфиденциальности
 
-[howknowme.github.io/subly/privacy.html](https://howknowme.github.io/subly/privacy.html)
+[howknowme.github.io/Spisano/privacy.html](https://howknowme.github.io/Spisano/privacy.html)
 
 ## Лицензия
 

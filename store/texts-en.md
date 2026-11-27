@@ -41,7 +41,7 @@ YOUR DATA, YOUR CONTROL
 
 Dark theme, English and Russian.
 
-Spisano is free and open source: github.com/howknowme/subly
+Spisano is free and open source: github.com/howknowme/Spisano
 
 ## Category
 Finance
