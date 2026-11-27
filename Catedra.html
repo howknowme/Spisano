@@ -89,6 +89,13 @@ tr:hover td { background: var(--accent-2); }
 .groups div { background: var(--accent-2); border-radius: 10px; padding: 12px; }
 .stage { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
 .print-area { display: none; }
+.sync-status { font-size: 12px; padding: 8px 12px; margin: 10px 0 0; border-radius: 8px; background: rgba(255,255,255,.07); cursor: pointer; }
+.sync-status:empty { display: none; }
+.pair-box { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 14px 0; }
+.pair-box > div { background: var(--accent-2); border-radius: 10px; padding: 14px; }
+.pair-box span { display: block; font-size: 12px; margin-bottom: 6px; }
+.pair-val { font-size: 24px; color: var(--accent); word-break: break-all; }
+.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .04em; }
 @media (max-width: 760px) {
   body { flex-direction: column; height: auto; min-height: 100%; }
   .sidebar { width: 100%; padding: 10px max(16px, env(safe-area-inset-left, 0px)); }
@@ -127,6 +134,7 @@ tr:hover td { background: var(--accent-2); }
     <button data-view="teste">🧪 Generator teste</button>
     <button data-view="rapoarte">📊 Rapoarte părinți</button>
     <button data-view="clasa">🎲 La clasă</button>
+    <button data-view="sync">📶 Sincronizare Wi‑Fi</button>
     <button data-view="setari">⚙️ Setări și backup</button>
   </nav>
   <div class="sem-switch">
@@ -137,6 +145,342 @@ tr:hover td { background: var(--accent-2); }
 <main id="view"></main>
 <div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
 <div id="toast" class="toast hidden"></div>
+<script>
+/* Catedra – nucleul sincronizării (folosit în browser, Android și în procesul principal Electron).
+   - Datele sunt împărțite în „entități” (o notă, o absență, o clasă cu elevii ei, o oră din orar...).
+   - Fiecare entitate are un marcaj de timp al ultimei modificări; ștergerile lasă „pietre funerare”.
+   - La sincronizare câștigă modificarea cea mai recentă, entitate cu entitate.
+   - Tot traficul este criptat AES-GCM cu o cheie derivată (PBKDF2) din codul de asociere. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.SyncCore = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  const subtle = () => globalThis.crypto.subtle;
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const PORT = 47800;
+  const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // fără 0/O, 1/I/L
+
+  const b64 = (buf) => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+  function randomCode() {
+    const r = new Uint8Array(16); globalThis.crypto.getRandomValues(r);
+    let s = ''; for (let i = 0; i < 16; i++) { s += ALPHA[r[i] % ALPHA.length]; if (i % 4 === 3 && i < 15) s += '-'; }
+    return s; // 16 caractere din 31 ≈ 79 de biți
+  }
+  const normCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  function randomId() { const r = new Uint8Array(8); globalThis.crypto.getRandomValues(r); return [...r].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+
+  const keyCache = new Map();
+  async function deriveKey(code) {
+    const c = normCode(code);
+    if (keyCache.has(c)) return keyCache.get(c);
+    const base = await subtle().importKey('raw', enc.encode(c), 'PBKDF2', false, ['deriveKey']);
+    const key = await subtle().deriveKey({ name: 'PBKDF2', salt: enc.encode('catedra-sync-v1'), iterations: 150000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    keyCache.set(c, key);
+    return key;
+  }
+  async function seal(code, obj) {
+    const key = await deriveKey(code);
+    const iv = new Uint8Array(12); globalThis.crypto.getRandomValues(iv);
+    const ct = await subtle().encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify({ t: Date.now(), d: obj })));
+    return { v: 1, iv: b64(iv), ct: b64(ct) };
+  }
+  // Aruncă eroare dacă codul e greșit sau mesajul e mai vechi de 10 minute (protecție la reluare).
+  async function open(code, msg, maxSkewMs = 10 * 60 * 1000) {
+    const key = await deriveKey(code);
+    const pt = await subtle().decrypt({ name: 'AES-GCM', iv: unb64(msg.iv) }, key, unb64(msg.ct));
+    const o = JSON.parse(dec.decode(pt));
+    if (Math.abs(Date.now() - o.t) > maxSkewMs) throw new Error('mesaj expirat – verificați ora pe dispozitive');
+    return o.d;
+  }
+
+  // ---------- Entități ----------
+  const LISTS = { g: 'grades', a: 'absences', p: 'plans', l: 'lessons', q: 'questions', c: 'classes' };
+  function entities(D) {
+    const m = {};
+    const { sem, ...settings } = D.settings || {};
+    m['s:settings'] = settings;
+    for (const [p, k] of Object.entries(LISTS)) for (const x of D[k] || []) m[p + ':' + x.id] = x;
+    for (const [k, v] of Object.entries(D.timetable || {})) m['t:' + k] = v;
+    return m;
+  }
+  function applyEntities(D, ent) {
+    for (const [p, k] of Object.entries(LISTS)) {
+      const old = D[k] || [], seen = new Set(), out = [];
+      for (const x of old) { const v = ent[p + ':' + x.id]; if (v) { out.push(v); seen.add(x.id); } }
+      for (const [key, v] of Object.entries(ent)) if (key.startsWith(p + ':') && !seen.has(key.slice(2))) out.push(v);
+      D[k] = out;
+    }
+    D.timetable = {};
+    for (const [key, v] of Object.entries(ent)) if (key.startsWith('t:')) D.timetable[key.slice(2)] = v;
+    if (ent['s:settings']) D.settings = { ...D.settings, ...ent['s:settings'], sem: D.settings.sem };
+    return D;
+  }
+  const hashes = (ent) => { const h = {}; for (const [k, v] of Object.entries(ent)) h[k] = JSON.stringify(v); return h; };
+
+  // Marchează ce s-a schimbat de la ultima salvare. meta[k] = timpul modificării, del[k] = timpul ștergerii.
+  function stamp(sync, prevHashes, ent) {
+    const now = () => (sync.clock = Math.max(Date.now(), (sync.clock || 0) + 1));
+    const cur = hashes(ent);
+    let changed = false;
+    for (const [k, h] of Object.entries(cur)) {
+      if (prevHashes[k] !== undefined && prevHashes[k] !== h) { sync.meta[k] = now(); delete sync.del[k]; changed = true; }
+      else if (prevHashes[k] === undefined) { sync.meta[k] = now(); delete sync.del[k]; changed = true; }
+      else if (!sync.meta[k]) sync.meta[k] = 1; // date existente dinainte de sincronizare: marcaj minim
+    }
+    for (const k of Object.keys(prevHashes)) if (!(k in cur)) { sync.del[k] = now(); delete sync.meta[k]; changed = true; }
+    return { hashes: cur, changed };
+  }
+
+  // Îmbină două stări {ent, meta, del}. Câștigă marcajul cel mai recent; la egalitate rămâne starea locală.
+  function merge(local, remote) {
+    const out = { ent: {}, meta: {}, del: {} };
+    const keys = new Set([...Object.keys(local.meta), ...Object.keys(local.del), ...Object.keys(remote.meta || {}), ...Object.keys(remote.del || {})]);
+    let changedLocal = false;
+    for (const k of keys) {
+      const lt = Math.max(local.meta[k] || 0, local.del[k] || 0);
+      const rt = Math.max((remote.meta || {})[k] || 0, (remote.del || {})[k] || 0);
+      const src = rt > lt ? remote : local;
+      if (src === remote) changedLocal = true;
+      if ((src.del || {})[k] && (src.del[k] >= ((src.meta || {})[k] || 0))) out.del[k] = src.del[k];
+      else if ((src.meta || {})[k] && src.ent[k] !== undefined) { out.meta[k] = src.meta[k]; out.ent[k] = src.ent[k]; }
+    }
+    // Entități fără marcaj (date foarte vechi) – se păstrează.
+    for (const [k, v] of Object.entries(local.ent)) if (!(k in out.ent) && !(k in out.del)) { out.ent[k] = v; }
+    return { merged: out, changedLocal };
+  }
+
+  return { PORT, randomCode, randomId, normCode, seal, open, entities, applyEntities, hashes, stamp, merge };
+});
+
+</script>
+<script>
+'use strict';
+/* Catedra – sincronizare automată prin Wi‑Fi.
+   Calculatorul (aplicația desktop) este „centrul”: pornește un mic server în rețeaua locală.
+   Telefonul / browserul se asociază o singură dată (adresă + cod) și apoi se sincronizează singur. */
+const Sync = (() => {
+  const C = SyncCore;
+  let hashes = {};
+  let timer = null, busy = false, lastScan = 0;
+  const status = { text: '', ok: null, at: 0 };
+  const isHub = () => !!(window.desktop && window.desktop.syncServer);
+
+  function ensure() {
+    if (!D.sync) D.sync = { deviceId: C.randomId(), meta: {}, del: {}, clock: 0, peer: null, hub: null };
+    D.sync.meta = D.sync.meta || {}; D.sync.del = D.sync.del || {};
+    return D.sync;
+  }
+  function stateForWire() { const s = ensure(); return { ent: C.entities(D), meta: s.meta, del: s.del }; }
+
+  // Apelată la fiecare salvare: notează ce s-a modificat.
+  function onSave() {
+    const s = ensure();
+    const r = C.stamp(s, hashes, C.entities(D));
+    hashes = r.hashes;
+    if (r.changed && s.peer) schedule(2500);
+  }
+  // Apelată după ce datele au fost încărcate / înlocuite din afară.
+  function reset() { ensure(); hashes = C.hashes(C.entities(D)); }
+
+  // Îmbină o stare primită și reafișează (fără a strica un formular deschis).
+  function absorb(remote) {
+    const s = ensure();
+    const { merged, changedLocal } = C.merge(stateForWire(), remote);
+    C.applyEntities(D, merged.ent);
+    s.meta = merged.meta; s.del = merged.del;
+    hashes = C.hashes(C.entities(D));
+    persist();
+    if (changedLocal) refreshView();
+    return merged;
+  }
+  function persist() { const json = JSON.stringify(D); try { if (window.desktop) window.desktop.save(json); else { localStorage.setItem(KEY, json); if (window.mobile) window.mobile.mirror(json); } } catch (e) {} }
+  let pendingRefresh = false;
+  function refreshView() {
+    const editing = !$('#modal').classList.contains('hidden') || state.editing || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+    if (editing) { pendingRefresh = true; return; }
+    pendingRefresh = false; go(current);
+  }
+  document.addEventListener('focusout', () => { if (pendingRefresh) setTimeout(refreshView, 300); });
+
+  // ---------- Client (telefon / browser) ----------
+  const timeoutFetch = (url, opts = {}, ms = 4000) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return fetch(url, { ...opts, signal: c.signal }).finally(() => clearTimeout(t)); };
+  const base = (host) => `http://${host}:${C.PORT}/catedra`;
+
+  async function hello(host, ms) {
+    const r = await timeoutFetch(base(host) + '/hello', {}, ms);
+    const j = await r.json(); if (j.app !== 'catedra') throw new Error('nu este Catedra');
+    return j;
+  }
+  async function exchange(host, code) {
+    const msg = await C.seal(code, { from: ensure().deviceId, name: deviceName(), state: stateForWire() });
+    const r = await timeoutFetch(base(host) + '/sync', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(msg) }, 15000);
+    if (r.status === 403) throw new Error('cod greșit');
+    if (!r.ok) throw new Error('eroare server ' + r.status);
+    return C.open(code, await r.json());
+  }
+  // Caută calculatorul în aceeași rețea (dacă i s-a schimbat adresa IP).
+  async function scan(prevHost, hubId) {
+    const m = String(prevHost).match(/^(\d+\.\d+\.\d+)\.\d+$/); if (!m) return null;
+    const hosts = Array.from({ length: 254 }, (_, i) => `${m[1]}.${i + 1}`).filter((h) => h !== prevHost);
+    for (let i = 0; i < hosts.length; i += 40) {
+      const found = await Promise.all(hosts.slice(i, i + 40).map((h) => hello(h, 1500).then((j) => (j.id === hubId ? h : null)).catch(() => null)));
+      const h = found.find(Boolean); if (h) return h;
+    }
+    return null;
+  }
+  async function syncNow(manual) {
+    const s = ensure(); if (!s.peer || busy) return;
+    busy = true; setStatus('Se sincronizează…', null);
+    try {
+      let host = s.peer.host;
+      try { await hello(host, 3000); }
+      catch (e) {
+        if (Date.now() - lastScan < 5 * 60 * 1000 && !manual) throw new Error('Calculatorul nu este găsit în rețea');
+        lastScan = Date.now(); setStatus('Caut calculatorul în rețea…', null);
+        const h = await scan(host, s.peer.hubId); if (!h) throw new Error('Calculatorul nu este găsit în rețea');
+        s.peer.host = host = h;
+      }
+      const reply = await exchange(host, s.peer.code);
+      absorb(reply.state);
+      s.peer.lastOk = Date.now(); persist();
+      setStatus('Sincronizat', true);
+    } catch (e) {
+      setStatus(e.name === 'AbortError' ? 'Calculatorul nu răspunde' : (e.message || 'Eroare'), false);
+    } finally { busy = false; }
+  }
+  function schedule(ms) { clearTimeout(timer); timer = setTimeout(() => { syncNow(); schedule(30000); }, ms); }
+
+  async function pair(host, code) {
+    host = host.trim().replace(/^https?:\/\//, '').replace(/[:/].*$/, '');
+    const j = await hello(host, 5000);
+    const s = ensure();
+    s.peer = { host, code: C.normCode(code), hubId: j.id, lastOk: 0 };
+    const reply = await exchange(host, s.peer.code); // verifică și codul
+    absorb(reply.state); s.peer.lastOk = Date.now(); persist();
+    setStatus('Sincronizat', true); schedule(30000);
+  }
+  function unpair() { ensure().peer = null; clearTimeout(timer); persist(); setStatus('', null); }
+
+  // ---------- Centru (aplicația desktop) ----------
+  async function hubStart() {
+    const s = ensure();
+    if (!s.hub) s.hub = { id: C.randomId(), code: C.randomCode(), enabled: true, devices: {} };
+    s.hub.enabled = true; persist();
+    return window.desktop.syncServer({ enabled: true, id: s.hub.id, code: s.hub.code });
+  }
+  async function hubStop() { const s = ensure(); if (s.hub) s.hub.enabled = false; persist(); return window.desktop.syncServer({ enabled: false }); }
+  function hubNewCode() { const s = ensure(); s.hub.code = C.randomCode(); s.hub.devices = {}; persist(); return hubStart(); }
+  // Cerere primită de la un telefon (decriptată deja în procesul principal).
+  function hubIncoming(req) {
+    const s = ensure();
+    const merged = absorb(req.state);
+    s.hub.devices[req.from] = { name: String(req.name || 'Dispozitiv').slice(0, 60), at: Date.now() };
+    persist();
+    setStatus('Sincronizat cu ' + s.hub.devices[req.from].name, true);
+    return { state: merged };
+  }
+
+  function deviceName() {
+    const ua = navigator.userAgent;
+    if (/Android/i.test(ua)) return 'Telefon Android'; if (/iPhone|iPad/i.test(ua)) return 'iPhone/iPad';
+    return 'Browser';
+  }
+  function setStatus(text, ok) {
+    Object.assign(status, { text, ok, at: Date.now() });
+    const el = $('#sync-status'); if (el) render(el);
+    if (current === 'sync' && !busy) { const v = $('#sync-live'); if (v) v.textContent = statusLine(); }
+  }
+  const ago = (t) => { if (!t) return 'niciodată'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'acum câteva secunde' : s < 3600 ? `acum ${Math.round(s / 60)} min` : new Date(t).toLocaleString('ro-RO'); };
+  const statusLine = () => status.text ? `${status.ok === false ? '⚠️' : status.ok ? '✅' : '🔄'} ${status.text} · ${ago(status.at)}` : '';
+  function render(el) {
+    const s = D.sync || {};
+    const on = isHub() ? s.hub && s.hub.enabled : !!s.peer;
+    el.innerHTML = on ? `<span>${status.ok === false ? '⚠️' : '📶'} Wi‑Fi: ${esc(status.ok === false ? status.text : status.text || 'activ')}</span>` : '';
+  }
+
+  async function init() {
+    reset();
+    const el = document.createElement('div'); el.id = 'sync-status'; el.className = 'sync-status';
+    el.addEventListener('click', () => go('sync'));
+    $('.sem-switch').before(el);
+    if (isHub()) {
+      window.desktop.onSyncRequest(hubIncoming);
+      if (D.sync.hub && D.sync.hub.enabled) { try { await hubStart(); setStatus('Așteaptă telefoanele', true); } catch (e) { setStatus('Serverul nu a pornit', false); } }
+    } else if (D.sync.peer) {
+      schedule(800);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(300); });
+      window.addEventListener('online', () => schedule(500));
+    }
+    render(el);
+    setInterval(() => render(el), 30000);
+  }
+
+  return { init, onSave, reset, syncNow, pair, unpair, hubStart, hubStop, hubNewCode, isHub, status, statusLine, ago };
+})();
+
+</script>
+<script>
+'use strict';
+/* Catedra pe Android (Capacitor): tipărire nativă, partajare fișiere, copie a datelor în memoria internă,
+   butonul „Înapoi”. În browser sau pe calculator acest fișier nu face nimic. */
+(function () {
+  const Cap = window.Capacitor;
+  if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) return;
+  const Filesystem = Cap.registerPlugin('Filesystem');
+  const Share = Cap.registerPlugin('Share');
+  const App = Cap.registerPlugin('App');
+  const Printer = Cap.registerPlugin('CatedraPrint');
+  const DATA_FILE = 'catedra-date.json';
+  const KEY = 'catedra-date';
+
+  // Datele stau în localStorage; o copie se scrie și în memoria internă a aplicației.
+  // Dacă sistemul golește localStorage, datele se recuperează automat din fișier.
+  window.desktopReady = (async () => {
+    let has = false;
+    try { has = !!localStorage.getItem(KEY); } catch (e) {}
+    if (!has) {
+      try {
+        const r = await Filesystem.readFile({ path: DATA_FILE, directory: 'DATA', encoding: 'utf8' });
+        if (r && r.data) localStorage.setItem(KEY, r.data);
+      } catch (e) { /* prima pornire */ }
+    }
+  })();
+
+  let mirrorTimer = null, lastJson = null;
+  const writeMirror = () => { if (lastJson != null) Filesystem.writeFile({ path: DATA_FILE, data: lastJson, directory: 'DATA', encoding: 'utf8' }).catch(() => {}); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(mirrorTimer); writeMirror(); } });
+
+  const PRINT_CSS = `body{font-family:sans-serif;font-size:11pt;color:#000;margin:0}
+    table{border-collapse:collapse;width:100%}th,td{border:1px solid #000;padding:3px 5px;text-align:left;vertical-align:top}
+    h1,h2,h3{margin:6px 0}.page-break{page-break-after:always}`;
+
+  window.mobile = {
+    mirror(json) { lastJson = json; clearTimeout(mirrorTimer); mirrorTimer = setTimeout(writeMirror, 1500); },
+    async print(html) {
+      const doc = `<!doctype html><html lang="ro"><head><meta charset="utf-8"><style>${PRINT_CSS}</style></head><body>${html}</body></html>`;
+      try { await Printer.print({ html: doc, name: 'Catedra' }); } catch (e) { toast('Tipărirea nu este disponibilă: ' + (e.message || e)); }
+    },
+    async exportFile(name, content) {
+      try {
+        const safe = name.replace(/[^\w.\-ăâîșțĂÂÎȘȚ]+/g, '_');
+        const r = await Filesystem.writeFile({ path: safe, data: content, directory: 'CACHE', encoding: 'utf8' });
+        await Share.share({ title: safe, dialogTitle: 'Trimite sau salvează fișierul', files: [r.uri] });
+      } catch (e) { if (!/cancel/i.test(String(e.message || e))) toast('Fișierul nu a putut fi partajat'); }
+    }
+  };
+
+  App.addListener('backButton', () => {
+    if (!document.querySelector('#modal').classList.contains('hidden')) return closeModal();
+    if (typeof current !== 'undefined' && current !== 'acasa') return go('acasa');
+    App.exitApp();
+  });
+  App.addListener('resume', () => { try { Sync.syncNow(); } catch (e) {} });
+})();
+
+</script>
 <script>
 'use strict';
 /* Catedra – asistentul profesorului. Toate datele sunt stocate local, pe calculator. */
@@ -157,8 +501,9 @@ function loadData() {
 }
 let D = blank();
 function save() {
+  try { Sync.onSave(); } catch (e) { console.error(e); }
   const json = JSON.stringify(D);
-  try { if (window.desktop) window.desktop.save(json); else localStorage.setItem(KEY, json); }
+  try { if (window.desktop) window.desktop.save(json); else { localStorage.setItem(KEY, json); if (window.mobile) window.mobile.mirror(json); } }
   catch { toast('⚠️ Datele nu au putut fi salvate'); }
 }
 
@@ -189,12 +534,14 @@ const embedded = (() => { try { return !window.desktop && window.top !== window.
 const EMB_MSG = 'În versiunea online tipărirea și salvarea fișierelor nu sunt disponibile. Folosiți fișierul Catedra.html descărcat pe calculator.';
 function printHTML(html) {
   if (window.desktop && window.desktop.print) return window.desktop.print(html);
+  if (window.mobile) return window.mobile.print(html);
   if (embedded) return toast(EMB_MSG);
   let p = $('#print'); if (!p) { p = document.createElement('div'); p.id = 'print'; p.className = 'print-area'; document.body.appendChild(p); }
   p.innerHTML = html; window.print();
 }
 async function download(name, content, mime = 'text/plain') {
   if (window.desktop) { if (await window.desktop.exportFile(name, content)) toast('Fișier salvat'); return; }
+  if (window.mobile) return window.mobile.exportFile(name, content);
   if (embedded) return toast(EMB_MSG);
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type: mime + ';charset=utf-8' })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
@@ -243,7 +590,7 @@ function bindClassSelect(fn) { const s = $('#cls-select'); s && s.addEventListen
 const needClasses = () => `<div class="card empty">Nu aveți încă nicio clasă. <br><br><button class="btn" data-go="clase">+ Adaugă prima clasă</button></div>`;
 
 function go(view) {
-  current = view;
+  current = view; state.editing = false;
   $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
   $$('.seg button').forEach((b) => b.classList.toggle('active', Number(b.dataset.sem) === sem()));
   (Views[view] || Views.acasa)();
@@ -516,7 +863,7 @@ Views.lectie = () => {
   $$('[data-d]').forEach((b) => (b.onclick = () => ask('Ștergeți proiectul?', () => { D.lessons = D.lessons.filter((l) => l.id !== b.dataset.d); save(); Views.lectie(); })));
 };
 function lessonEditor(l) {
-  const isNew = !l;
+  const isNew = !l; setTimeout(() => (state.editing = true));
   l = l || { id: uid(), classId: D.classes[0]?.id || '', date: today(), topic: '', unit: '', type: LESSON_TYPES[0], comp: '', objectives: 'O1 – \nO2 – \nO3 – ', methods: 'conversația, explicația, exercițiul, problematizarea', resources: 'manualul, fișe de lucru, videoproiector', forms: 'frontal, individual, pe grupe', evaluation: 'observarea sistematică, evaluare orală', bibliography: '', stages: STAGES.map(([name, min]) => ({ name, min, teacher: '', students: '' })) };
   V(`<h1>${isNew ? 'Proiect de lecție nou' : 'Proiect de lecție'}</h1><p class="sub">Toate câmpurile sunt opționale. Apăsați „Salvează” la final.</p>
   <div class="card"><div class="grid g2">
@@ -748,10 +1095,57 @@ Views.setari = () => {
   <p class="muted">Catedra v1.0 · funcționează complet offline · datele nu părăsesc calculatorul.</p>`);
   $('#sv').onclick = () => { Object.assign(s, { teacher: $('#st').value.trim(), school: $('#ss').value.trim(), year: $('#sy').value.trim(), absLimit: Number($('#sa').value) || 10, periods: Number($('#sp').value) || 7, startTime: $('#sb').value || '08:00', lessonMin: Number($('#sl').value) || 50, breakMin: Number($('#sk').value) || 10 }); save(); toast('Setări salvate'); };
   $('#bk').onclick = () => download(`catedra_backup_${today()}.json`, JSON.stringify(D, null, 1), 'application/json');
-  const restore = (txt) => { try { const d = JSON.parse(txt); if (!d.classes) throw 0; ask('Datele actuale vor fi înlocuite. Continuați?', () => { D = { ...blank(), ...d, settings: { ...blank().settings, ...d.settings } }; save(); toast('Date restaurate'); go('acasa'); }); } catch { toast('Fișier invalid'); } };
+  const restore = (txt) => { try { const d = JSON.parse(txt); if (!d.classes) throw 0; ask('Datele actuale vor fi înlocuite. Continuați?', () => { D = { ...blank(), ...d, settings: { ...blank().settings, ...d.settings }, sync: D.sync }; save(); toast('Date restaurate'); go('acasa'); }); } catch { toast('Fișier invalid'); } };
   $('#rs').onclick = async () => { if (window.desktop) { const t = await window.desktop.importFile(); t && restore(t); } else $('#rf').click(); };
   $('#rf').onchange = (e) => { const f = e.target.files[0]; if (f) f.text().then(restore); };
-  $('#wipe').onclick = () => ask('Sigur ștergeți TOATE datele? Acțiunea nu poate fi anulată – faceți întâi o copie de rezervă!', () => { D = blank(); save(); go('acasa'); }, 'Da, șterge tot');
+  $('#wipe').onclick = () => ask('Sigur ștergeți TOATE datele? Acțiunea nu poate fi anulată – faceți întâi o copie de rezervă!', () => { D = { ...blank(), sync: D.sync }; save(); go('acasa'); }, 'Da, șterge tot');
+};
+
+
+// ---------- Sincronizare Wi‑Fi ----------
+Views.sync = async () => {
+  const s = D.sync || {};
+  if (Sync.isHub()) {
+    const hub = s.hub && s.hub.enabled;
+    const info = hub ? await window.desktop.syncServer({ enabled: true, id: s.hub.id, code: s.hub.code }).catch(() => null) : null;
+    const devs = Object.values((s.hub && s.hub.devices) || {}).sort((a, b) => b.at - a.at);
+    V(`<h1>Sincronizare Wi‑Fi</h1><p class="sub">Telefonul și calculatorul își trimit automat notele, absențele și restul datelor când sunt în aceeași rețea Wi‑Fi. Calculatorul este „centrul”: telefoanele se conectează la el.</p>
+    <div class="card"><div class="row"><h2 style="margin:0">Sincronizarea cu telefoanele</h2><span class="spacer"></span>
+      ${hub ? '<span class="chip good">Pornită</span><button class="btn ghost" id="off">Oprește</button>' : '<span class="chip warn">Oprită</span><button class="btn" id="on">Pornește sincronizarea</button>'}</div>
+      ${hub ? (info && info.running ? `<div class="pair-box">
+        <div><span class="muted">Adresa calculatorului</span><b class="pair-val">${info.ips.length ? info.ips.map(esc).join('<br>') : 'nicio rețea'}</b></div>
+        <div><span class="muted">Codul de asociere</span><b class="pair-val mono">${esc(s.hub.code)}</b></div></div>
+        <p class="muted">Pe telefon: deschideți Catedra → „Sincronizare Wi‑Fi” → introduceți adresa și codul de mai sus. Asocierea se face o singură dată; apoi datele circulă singure.<br>
+        Dacă Windows întreabă despre Firewall, permiteți accesul pentru <b>rețele private</b>.</p>
+        <div class="row"><button class="btn ghost sm" id="newcode">Generează alt cod (deconectează telefoanele)</button></div>` : `<div class="alert bad">Serverul nu a putut porni${info && info.error ? ': ' + esc(info.error) : ''}. Verificați dacă portul ${SyncCore.PORT} nu este folosit de alt program.</div>`) : '<p class="muted">Porniți sincronizarea pentru a primi un cod de asociere pentru telefon.</p>'}
+    </div>
+    ${hub ? `<div class="card"><h2>Dispozitive conectate</h2>${devs.length ? `<table><tr><th>Dispozitiv</th><th>Ultima sincronizare</th></tr>${devs.map((d) => `<tr><td>📱 ${esc(d.name)}</td><td>${Sync.ago(d.at)}</td></tr>`).join('')}</table>` : '<p class="muted">Încă niciun telefon conectat.</p>'}</div>` : ''}
+    <div class="card"><h2>Cum funcționează</h2><ul class="muted"><li>Tot traficul este criptat (AES‑256) cu codul de asociere; fără cod nimeni nu poate citi sau modifica datele.</li><li>Fiecare notă, absență sau clasă se îmbină separat; dacă aceeași informație a fost modificată pe ambele dispozitive, rămâne modificarea cea mai recentă.</li><li>Ștergerile se transmit și ele. Faceți totuși periodic o copie de rezervă din „Setări”.</li><li>Datele nu trec prin internet – doar prin rețeaua locală.</li></ul></div>`);
+    if ($('#on')) $('#on').onclick = async () => { await Sync.hubStart(); Views.sync(); };
+    if ($('#off')) $('#off').onclick = async () => { await Sync.hubStop(); Views.sync(); };
+    if ($('#newcode')) $('#newcode').onclick = () => ask('Telefoanele asociate vor trebui reconectate cu noul cod. Continuați?', async () => { await Sync.hubNewCode(); Views.sync(); });
+    return;
+  }
+  const p = s.peer;
+  V(`<h1>Sincronizare Wi‑Fi</h1><p class="sub">Conectați această aplicație la Catedra de pe calculator. După asociere, datele se sincronizează automat ori de câte ori sunteți în aceeași rețea Wi‑Fi.</p>
+  ${p ? `<div class="card"><div class="row"><h2 style="margin:0">Conectat la calculator</h2><span class="spacer"></span><span class="chip ${Sync.status.ok === false ? 'bad' : 'good'}">${Sync.status.ok === false ? 'Fără legătură' : 'Activ'}</span></div>
+      <p>Adresa: <b>${esc(p.host)}</b> · Ultima sincronizare reușită: <b>${Sync.ago(p.lastOk)}</b></p><p class="muted" id="sync-live">${esc(Sync.statusLine())}</p>
+      <div class="row"><button class="btn" id="now">🔄 Sincronizează acum</button><span class="spacer"></span><button class="btn ghost" id="unpair">Deconectează</button></div></div>`
+  : `<div class="card"><h2>Asociere cu calculatorul</h2>
+      <ol class="muted"><li>Pe calculator, în Catedra, deschideți „Sincronizare Wi‑Fi” și apăsați „Pornește sincronizarea”.</li><li>Conectați telefonul la aceeași rețea Wi‑Fi.</li><li>Introduceți mai jos adresa și codul afișate pe calculator.</li></ol>
+      <label class="f">Adresa calculatorului<input id="ph" inputmode="decimal" placeholder="ex.: 192.168.1.23" autocomplete="off"></label>
+      <label class="f">Codul de asociere<input id="pc" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" class="mono"></label>
+      <div class="row"><button class="btn" id="pair">Conectează</button><span class="muted" id="pmsg"></span></div>
+      <p class="muted">Datele existente pe ambele dispozitive se îmbină – nimic nu se pierde.</p></div>`}`);
+  if ($('#now')) $('#now').onclick = async () => { $('#now').disabled = true; await Sync.syncNow(true); Views.sync(); };
+  if ($('#unpair')) $('#unpair').onclick = () => ask('Deconectați această aplicație de la calculator? Datele rămân pe dispozitiv.', () => { Sync.unpair(); Views.sync(); });
+  if ($('#pair')) $('#pair').onclick = async () => {
+    const host = $('#ph').value, code = $('#pc').value;
+    if (!host.trim() || SyncCore.normCode(code).length !== 16) return toast('Introduceți adresa și codul complet (16 caractere)');
+    $('#pair').disabled = true; $('#pmsg').textContent = 'Se conectează…';
+    try { await Sync.pair(host, code); toast('Conectat! Datele au fost sincronizate.'); Views.sync(); }
+    catch (e) { $('#pair').disabled = false; $('#pmsg').textContent = e.name === 'AbortError' || /fetch|network|Failed/i.test(e.message) ? 'Calculatorul nu răspunde. Verificați adresa, rețeaua Wi‑Fi și că sincronizarea este pornită pe calculator.' : /cod|decrypt|operation/i.test(e.message + e.name) ? 'Cod greșit.' : e.message; }
+  };
 };
 
 // ---------- Date demonstrative ----------
@@ -776,7 +1170,7 @@ window.loadDemo = (force) => {
   save(); toast('Date demonstrative încărcate'); go('acasa');
 };
 
-(async () => { try { if (window.desktopReady) await window.desktopReady; } catch {} D = loadData(); go('acasa'); })();
+(async () => { try { if (window.desktopReady) await window.desktopReady; } catch {} D = loadData(); try { await Sync.init(); } catch (e) { console.error(e); } go('acasa'); })();
 
 </script>
 </body>

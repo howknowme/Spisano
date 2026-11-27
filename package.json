@@ -13,9 +13,16 @@
     "start": "electron .",
     "dist:win": "electron-builder --win dir --x64 && makensis build/installer.nsi",
     "dist:linux": "electron-builder --linux deb --x64",
-    "build:html": "node scripts/build-single.js"
+    "build:html": "node scripts/build-single.js",
+    "dist:android": "node scripts/build-single.js www/index.html && npx cap sync android && cd android && ./gradlew assembleRelease"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.6.11",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/cli": "^7.6.11",
+    "@capacitor/core": "^7.6.11",
+    "@capacitor/filesystem": "^7.1.9",
+    "@capacitor/share": "^7.0.4",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8"
   },
@@ -25,7 +32,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "src/**/*"
+      "src/**/*",
+      "build/icon.png"
     ],
     "win": {
       "target": [

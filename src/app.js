@@ -17,8 +17,9 @@ function loadData() {
 }
 let D = blank();
 function save() {
+  try { Sync.onSave(); } catch (e) { console.error(e); }
   const json = JSON.stringify(D);
-  try { if (window.desktop) window.desktop.save(json); else localStorage.setItem(KEY, json); }
+  try { if (window.desktop) window.desktop.save(json); else { localStorage.setItem(KEY, json); if (window.mobile) window.mobile.mirror(json); } }
   catch { toast('⚠️ Datele nu au putut fi salvate'); }
 }
 
@@ -49,12 +50,14 @@ const embedded = (() => { try { return !window.desktop && window.top !== window.
 const EMB_MSG = 'În versiunea online tipărirea și salvarea fișierelor nu sunt disponibile. Folosiți fișierul Catedra.html descărcat pe calculator.';
 function printHTML(html) {
   if (window.desktop && window.desktop.print) return window.desktop.print(html);
+  if (window.mobile) return window.mobile.print(html);
   if (embedded) return toast(EMB_MSG);
   let p = $('#print'); if (!p) { p = document.createElement('div'); p.id = 'print'; p.className = 'print-area'; document.body.appendChild(p); }
   p.innerHTML = html; window.print();
 }
 async function download(name, content, mime = 'text/plain') {
   if (window.desktop) { if (await window.desktop.exportFile(name, content)) toast('Fișier salvat'); return; }
+  if (window.mobile) return window.mobile.exportFile(name, content);
   if (embedded) return toast(EMB_MSG);
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type: mime + ';charset=utf-8' })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
@@ -103,7 +106,7 @@ function bindClassSelect(fn) { const s = $('#cls-select'); s && s.addEventListen
 const needClasses = () => `<div class="card empty">Nu aveți încă nicio clasă. <br><br><button class="btn" data-go="clase">+ Adaugă prima clasă</button></div>`;
 
 function go(view) {
-  current = view;
+  current = view; state.editing = false;
   $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
   $$('.seg button').forEach((b) => b.classList.toggle('active', Number(b.dataset.sem) === sem()));
   (Views[view] || Views.acasa)();
@@ -376,7 +379,7 @@ Views.lectie = () => {
   $$('[data-d]').forEach((b) => (b.onclick = () => ask('Ștergeți proiectul?', () => { D.lessons = D.lessons.filter((l) => l.id !== b.dataset.d); save(); Views.lectie(); })));
 };
 function lessonEditor(l) {
-  const isNew = !l;
+  const isNew = !l; setTimeout(() => (state.editing = true));
   l = l || { id: uid(), classId: D.classes[0]?.id || '', date: today(), topic: '', unit: '', type: LESSON_TYPES[0], comp: '', objectives: 'O1 – \nO2 – \nO3 – ', methods: 'conversația, explicația, exercițiul, problematizarea', resources: 'manualul, fișe de lucru, videoproiector', forms: 'frontal, individual, pe grupe', evaluation: 'observarea sistematică, evaluare orală', bibliography: '', stages: STAGES.map(([name, min]) => ({ name, min, teacher: '', students: '' })) };
   V(`<h1>${isNew ? 'Proiect de lecție nou' : 'Proiect de lecție'}</h1><p class="sub">Toate câmpurile sunt opționale. Apăsați „Salvează” la final.</p>
   <div class="card"><div class="grid g2">
@@ -608,10 +611,57 @@ Views.setari = () => {
   <p class="muted">Catedra v1.0 · funcționează complet offline · datele nu părăsesc calculatorul.</p>`);
   $('#sv').onclick = () => { Object.assign(s, { teacher: $('#st').value.trim(), school: $('#ss').value.trim(), year: $('#sy').value.trim(), absLimit: Number($('#sa').value) || 10, periods: Number($('#sp').value) || 7, startTime: $('#sb').value || '08:00', lessonMin: Number($('#sl').value) || 50, breakMin: Number($('#sk').value) || 10 }); save(); toast('Setări salvate'); };
   $('#bk').onclick = () => download(`catedra_backup_${today()}.json`, JSON.stringify(D, null, 1), 'application/json');
-  const restore = (txt) => { try { const d = JSON.parse(txt); if (!d.classes) throw 0; ask('Datele actuale vor fi înlocuite. Continuați?', () => { D = { ...blank(), ...d, settings: { ...blank().settings, ...d.settings } }; save(); toast('Date restaurate'); go('acasa'); }); } catch { toast('Fișier invalid'); } };
+  const restore = (txt) => { try { const d = JSON.parse(txt); if (!d.classes) throw 0; ask('Datele actuale vor fi înlocuite. Continuați?', () => { D = { ...blank(), ...d, settings: { ...blank().settings, ...d.settings }, sync: D.sync }; save(); toast('Date restaurate'); go('acasa'); }); } catch { toast('Fișier invalid'); } };
   $('#rs').onclick = async () => { if (window.desktop) { const t = await window.desktop.importFile(); t && restore(t); } else $('#rf').click(); };
   $('#rf').onchange = (e) => { const f = e.target.files[0]; if (f) f.text().then(restore); };
-  $('#wipe').onclick = () => ask('Sigur ștergeți TOATE datele? Acțiunea nu poate fi anulată – faceți întâi o copie de rezervă!', () => { D = blank(); save(); go('acasa'); }, 'Da, șterge tot');
+  $('#wipe').onclick = () => ask('Sigur ștergeți TOATE datele? Acțiunea nu poate fi anulată – faceți întâi o copie de rezervă!', () => { D = { ...blank(), sync: D.sync }; save(); go('acasa'); }, 'Da, șterge tot');
+};
+
+
+// ---------- Sincronizare Wi‑Fi ----------
+Views.sync = async () => {
+  const s = D.sync || {};
+  if (Sync.isHub()) {
+    const hub = s.hub && s.hub.enabled;
+    const info = hub ? await window.desktop.syncServer({ enabled: true, id: s.hub.id, code: s.hub.code }).catch(() => null) : null;
+    const devs = Object.values((s.hub && s.hub.devices) || {}).sort((a, b) => b.at - a.at);
+    V(`<h1>Sincronizare Wi‑Fi</h1><p class="sub">Telefonul și calculatorul își trimit automat notele, absențele și restul datelor când sunt în aceeași rețea Wi‑Fi. Calculatorul este „centrul”: telefoanele se conectează la el.</p>
+    <div class="card"><div class="row"><h2 style="margin:0">Sincronizarea cu telefoanele</h2><span class="spacer"></span>
+      ${hub ? '<span class="chip good">Pornită</span><button class="btn ghost" id="off">Oprește</button>' : '<span class="chip warn">Oprită</span><button class="btn" id="on">Pornește sincronizarea</button>'}</div>
+      ${hub ? (info && info.running ? `<div class="pair-box">
+        <div><span class="muted">Adresa calculatorului</span><b class="pair-val">${info.ips.length ? info.ips.map(esc).join('<br>') : 'nicio rețea'}</b></div>
+        <div><span class="muted">Codul de asociere</span><b class="pair-val mono">${esc(s.hub.code)}</b></div></div>
+        <p class="muted">Pe telefon: deschideți Catedra → „Sincronizare Wi‑Fi” → introduceți adresa și codul de mai sus. Asocierea se face o singură dată; apoi datele circulă singure.<br>
+        Dacă Windows întreabă despre Firewall, permiteți accesul pentru <b>rețele private</b>.</p>
+        <div class="row"><button class="btn ghost sm" id="newcode">Generează alt cod (deconectează telefoanele)</button></div>` : `<div class="alert bad">Serverul nu a putut porni${info && info.error ? ': ' + esc(info.error) : ''}. Verificați dacă portul ${SyncCore.PORT} nu este folosit de alt program.</div>`) : '<p class="muted">Porniți sincronizarea pentru a primi un cod de asociere pentru telefon.</p>'}
+    </div>
+    ${hub ? `<div class="card"><h2>Dispozitive conectate</h2>${devs.length ? `<table><tr><th>Dispozitiv</th><th>Ultima sincronizare</th></tr>${devs.map((d) => `<tr><td>📱 ${esc(d.name)}</td><td>${Sync.ago(d.at)}</td></tr>`).join('')}</table>` : '<p class="muted">Încă niciun telefon conectat.</p>'}</div>` : ''}
+    <div class="card"><h2>Cum funcționează</h2><ul class="muted"><li>Tot traficul este criptat (AES‑256) cu codul de asociere; fără cod nimeni nu poate citi sau modifica datele.</li><li>Fiecare notă, absență sau clasă se îmbină separat; dacă aceeași informație a fost modificată pe ambele dispozitive, rămâne modificarea cea mai recentă.</li><li>Ștergerile se transmit și ele. Faceți totuși periodic o copie de rezervă din „Setări”.</li><li>Datele nu trec prin internet – doar prin rețeaua locală.</li></ul></div>`);
+    if ($('#on')) $('#on').onclick = async () => { await Sync.hubStart(); Views.sync(); };
+    if ($('#off')) $('#off').onclick = async () => { await Sync.hubStop(); Views.sync(); };
+    if ($('#newcode')) $('#newcode').onclick = () => ask('Telefoanele asociate vor trebui reconectate cu noul cod. Continuați?', async () => { await Sync.hubNewCode(); Views.sync(); });
+    return;
+  }
+  const p = s.peer;
+  V(`<h1>Sincronizare Wi‑Fi</h1><p class="sub">Conectați această aplicație la Catedra de pe calculator. După asociere, datele se sincronizează automat ori de câte ori sunteți în aceeași rețea Wi‑Fi.</p>
+  ${p ? `<div class="card"><div class="row"><h2 style="margin:0">Conectat la calculator</h2><span class="spacer"></span><span class="chip ${Sync.status.ok === false ? 'bad' : 'good'}">${Sync.status.ok === false ? 'Fără legătură' : 'Activ'}</span></div>
+      <p>Adresa: <b>${esc(p.host)}</b> · Ultima sincronizare reușită: <b>${Sync.ago(p.lastOk)}</b></p><p class="muted" id="sync-live">${esc(Sync.statusLine())}</p>
+      <div class="row"><button class="btn" id="now">🔄 Sincronizează acum</button><span class="spacer"></span><button class="btn ghost" id="unpair">Deconectează</button></div></div>`
+  : `<div class="card"><h2>Asociere cu calculatorul</h2>
+      <ol class="muted"><li>Pe calculator, în Catedra, deschideți „Sincronizare Wi‑Fi” și apăsați „Pornește sincronizarea”.</li><li>Conectați telefonul la aceeași rețea Wi‑Fi.</li><li>Introduceți mai jos adresa și codul afișate pe calculator.</li></ol>
+      <label class="f">Adresa calculatorului<input id="ph" inputmode="decimal" placeholder="ex.: 192.168.1.23" autocomplete="off"></label>
+      <label class="f">Codul de asociere<input id="pc" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" class="mono"></label>
+      <div class="row"><button class="btn" id="pair">Conectează</button><span class="muted" id="pmsg"></span></div>
+      <p class="muted">Datele existente pe ambele dispozitive se îmbină – nimic nu se pierde.</p></div>`}`);
+  if ($('#now')) $('#now').onclick = async () => { $('#now').disabled = true; await Sync.syncNow(true); Views.sync(); };
+  if ($('#unpair')) $('#unpair').onclick = () => ask('Deconectați această aplicație de la calculator? Datele rămân pe dispozitiv.', () => { Sync.unpair(); Views.sync(); });
+  if ($('#pair')) $('#pair').onclick = async () => {
+    const host = $('#ph').value, code = $('#pc').value;
+    if (!host.trim() || SyncCore.normCode(code).length !== 16) return toast('Introduceți adresa și codul complet (16 caractere)');
+    $('#pair').disabled = true; $('#pmsg').textContent = 'Se conectează…';
+    try { await Sync.pair(host, code); toast('Conectat! Datele au fost sincronizate.'); Views.sync(); }
+    catch (e) { $('#pair').disabled = false; $('#pmsg').textContent = e.name === 'AbortError' || /fetch|network|Failed/i.test(e.message) ? 'Calculatorul nu răspunde. Verificați adresa, rețeaua Wi‑Fi și că sincronizarea este pornită pe calculator.' : /cod|decrypt|operation/i.test(e.message + e.name) ? 'Cod greșit.' : e.message; }
+  };
 };
 
 // ---------- Date demonstrative ----------
@@ -636,4 +686,4 @@ window.loadDemo = (force) => {
   save(); toast('Date demonstrative încărcate'); go('acasa');
 };
 
-(async () => { try { if (window.desktopReady) await window.desktopReady; } catch {} D = loadData(); go('acasa'); })();
+(async () => { try { if (window.desktopReady) await window.desktopReady; } catch {} D = loadData(); try { await Sync.init(); } catch (e) { console.error(e); } go('acasa'); })();

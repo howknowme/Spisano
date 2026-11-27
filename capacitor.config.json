@@ -1,0 +1,12 @@
+{
+  "appId": "ro.catedra.app",
+  "appName": "Catedra",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

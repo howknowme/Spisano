@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Catedra</string>
+    <string name="title_activity_main">Catedra</string>
+    <string name="package_name">ro.catedra.app</string>
+    <string name="custom_url_scheme">ro.catedra.app</string>
+</resources>

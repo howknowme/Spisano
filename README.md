@@ -1,6 +1,6 @@
 # Catedra – asistentul digital al profesorului
 
-Aplicație pentru calculator (Windows / macOS / Linux), complet în limba română, care funcționează **offline**. Datele rămân doar pe calculatorul profesorului.
+Aplicație pentru calculator (Windows / Linux) și telefon Android, complet în limba română, care funcționează **offline**. Datele rămân doar pe calculatorul profesorului.
 
 ## De ce?
 Profesorii petrec ore întregi pe hârtii: catalog, calculul mediilor, absențe, planificări, proiecte de lecție, teste, fișe pentru părinți. Catedra face aceste lucruri automat.
@@ -18,6 +18,7 @@ Profesorii petrec ore întregi pe hârtii: catalog, calculul mediilor, absențe,
 | 🧪 **Generator de teste** | Bancă de itemi (grilă, A/F, răspuns deschis), import rapid din text, variante A/B/C/D amestecate, barem, transformare punctaj → notă |
 | 📊 **Rapoarte părinți** | Fișă individuală cu note, medie, absențe și observație generată automat |
 | 🎲 **La clasă** | Elev aleatoriu (fără repetare), cronometru, împărțire pe grupe |
+| 📶 **Sincronizare Wi‑Fi** | Telefonul și calculatorul își trimit automat datele în aceeași rețea Wi‑Fi (criptat, fără internet) |
 | ⚙️ **Setări** | Profil, durata orelor, copie de rezervă / restaurare (JSON) |
 
 ## Cel mai simplu mod (fără instalare)
@@ -43,12 +44,22 @@ sudo apt install ./catedra_1.0.0_amd64.deb
 ```
 Aplicația apare în meniu la „Educație”. Datele se păstrează în `~/.config/Catedra`.
 
+**Android:** copiați `Catedra-1.0.0.apk` pe telefon și deschideți-l. Telefonul va cere permisiunea „Instalează aplicații necunoscute” pentru aplicația din care deschideți fișierul – permiteți-o.
+
+## Sincronizare automată prin Wi‑Fi
+1. Pe calculator: **Sincronizare Wi‑Fi → Pornește sincronizarea**. Apar adresa calculatorului și un cod de 16 caractere.
+2. Pe telefon (în aceeași rețea Wi‑Fi): **Sincronizare Wi‑Fi** → introduceți adresa și codul → **Conectează**.
+3. Gata. De acum datele se sincronizează singure: la pornire, la revenirea în aplicație, la fiecare 30 de secunde și la câteva secunde după fiecare modificare. Dacă adresa calculatorului se schimbă, telefonul îl găsește singur în rețea.
+
+Detalii tehnice: calculatorul ascultă pe portul TCP 47800 (permiteți-l în Firewall pentru rețele private). Mesajele sunt criptate AES‑256‑GCM cu o cheie derivată din cod (PBKDF2); fiecare notă, absență, clasă etc. se îmbină separat, câștigă modificarea cea mai recentă, iar ștergerile se transmit. Și `Catedra.html` deschis în browser se poate conecta la calculator.
+
 ## Construire
 ```bash
 npm install
 npm run dist:win     # dist/Catedra-Setup-1.0.0.exe (pe Linux necesită pachetul nsis)
 npm run dist:linux   # dist/catedra_1.0.0_amd64.deb
 npm run build:html   # Catedra.html
+npm run dist:android # android/app/build/outputs/apk/release/app-release.apk (necesită Android SDK; semnătura din android/keystore.properties)
 ```
 Sau din GitHub: **Actions → Build Catedra → Run workflow**, apoi descărcați fișierul din „Artifacts”.
 
