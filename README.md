@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://howknowme.github.io/Spisano/"><b>Открыть в браузере</b></a>
+  <a href="https://howknowme.github.io/Spisano/app/"><b>Открыть в браузере</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk"><b>Скачать для Android (APK)</b></a>
 </p>
@@ -88,7 +88,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 
 ### iPhone и любой браузер
 
-Откройте [howknowme.github.io/Spisano](https://howknowme.github.io/Spisano/):
+Откройте [howknowme.github.io/Spisano/app](https://howknowme.github.io/Spisano/app/):
 - **iPhone (Safari):** «Поделиться» → «На экран „Домой“».
 - **Android (Chrome):** меню ⋮ → «Установить приложение».
 
