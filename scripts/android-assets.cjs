@@ -4,12 +4,12 @@ const { chromium } = require('playwright');
 const path = require('path');
 const res = path.join(__dirname, '..', 'android', 'app', 'src', 'main', 'res');
 
-const S = '<path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="50" stroke-linecap="round"/><circle cx="372" cy="256" r="36" fill="#f2a600"/>';
+const S = '<path d="M160 328c19 24 54 40 96 40 54 0 90-26 90-66 0-86-176-46-176-134 0-38 35-62 86-62 37 0 67 13 86 34" fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round"/><circle cx="392" cy="120" r="34" fill="#f2a600"/>';
 const full = (shape) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${shape}${S}</svg>`;
 const square = full('<rect width="512" height="512" rx="120" fill="#2f46d0"/>');
 const round = full('<circle cx="256" cy="256" r="256" fill="#2f46d0"/>');
 // adaptive foreground: 108dp canvas, logo inside the 66dp safe zone
-const fg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g transform="translate(256 256) scale(.72) translate(-256 -256)">${S}</g></svg>`;
+const fg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g transform="translate(256 256) scale(.62) translate(-256 -256)">${S}</g></svg>`;
 
 const dens = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 const splash = {

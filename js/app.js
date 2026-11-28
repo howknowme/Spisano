@@ -264,7 +264,7 @@ function applyTheme() {
   if (state.prefs.theme === 'auto') r.removeAttribute('data-theme');
   else r.setAttribute('data-theme', state.prefs.theme);
   r.lang = state.prefs.lang;
-  document.title = T().appName;
+  document.title = 'Subly';
   if (N.isNative()) {
     const bg = getComputedStyle(document.body).backgroundColor;
     const [rr, gg, bb] = (bg.match(/\d+/g) || [238, 241, 246]).map(Number);
@@ -318,8 +318,6 @@ function render() {
 
   // header summary
   $('#brand-tag').textContent = t.tagline;
-  $('#brand-name').textContent = t.appName;
-  $('#brand').setAttribute('aria-label', t.appName);
   $('#head-total').textContent = money(tot.month);
   $('#head-total-label').textContent = t.perMonth;
   $('#add-btn-label').textContent = t.add;
@@ -928,11 +926,11 @@ function viewPrefs() {
       clearBtn));
 
   const about = h('section', { class: 'card' }, h('h2', null, tp.about), h('p', null, tp.aboutText),
-    h('p', null, h('a', { href: 'https://howknowme.github.io/Spisano/privacy.html' + (state.prefs.lang === 'en' ? '#en' : ''), target: '_blank', rel: 'noopener' }, tp.privacy)),
+    h('p', null, h('a', { href: 'https://howknowme.github.io/subly/privacy.html' + (state.prefs.lang === 'en' ? '#en' : ''), target: '_blank', rel: 'noopener' }, tp.privacy)),
     N.isNative() ? null : h('p', { class: 'hint' }, tp.shortcuts),
     ui.installEvt ? h('div', { class: 'row-wrap' }, h('button', { type: 'button', class: 'btn btn-primary', onclick: install }, icon('down'), tp.install), h('span', { class: 'hint' }, tp.installHint)) : null,
     N.isNative() ? null : h('div', { class: 'row-wrap' },
-      h('a', { class: 'btn', href: 'https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk', target: '_blank', rel: 'noopener' }, icon('down'), tp.android),
+      h('a', { class: 'btn', href: 'https://github.com/howknowme/subly/releases/latest/download/subly.apk', target: '_blank', rel: 'noopener' }, icon('down'), tp.android),
       h('span', { class: 'hint' }, tp.androidHint)));
 
   return h('div', { class: 'stack prefs' }, general, reminders, rates, data, about);
@@ -979,7 +977,7 @@ function backupText() {
   return JSON.stringify({ app: 'subly', version: 1, exported: new Date().toISOString(), subs: state.subs, prefs: { ...state.prefs, notified: {} } }, null, 2);
 }
 
-function exportJSON() { download(`spisano-${today()}.json`, backupText(), 'application/json'); }
+function exportJSON() { download(`subly-${today()}.json`, backupText(), 'application/json'); }
 
 function exportCSV() {
   const t = T();
@@ -989,13 +987,13 @@ function exportCSV() {
     rows.push([x.name, x.price, x.currency, x.unit, x.every, x.status === 'active' ? C.nextPayment(x, today()) : '', t.categories[x.category], x.status, x.shared,
       C.monthlyCost(x, base, rates).toFixed(2), x.trialEnd, x.method, x.url, x.notes]);
   }
-  download(`spisano-${today()}.csv`, C.toCSV(rows), 'text/csv;charset=utf-8');
+  download(`subly-${today()}.csv`, C.toCSV(rows), 'text/csv;charset=utf-8');
 }
 
 function exportICS() {
   const t = T();
-  const ics = C.toICS(state.subs, { remindDays: state.prefs.remindDays, labels: { calendar: t.appName, trialEnds: t.trialEnds } });
-  download('spisano.ics', ics, 'text/calendar;charset=utf-8');
+  const ics = C.toICS(state.subs, { remindDays: state.prefs.remindDays, labels: { calendar: 'Subly', trialEnds: t.trialEnds } });
+  download('subly.ics', ics, 'text/calendar;charset=utf-8');
 }
 
 function importJSON(text) {

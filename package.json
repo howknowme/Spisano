@@ -16,9 +16,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/howknowme/Spisano"
+    "url": "https://github.com/howknowme/subly"
   },
-  "homepage": "https://howknowme.github.io/Spisano/",
+  "homepage": "https://howknowme.github.io/subly/",
   "dependencies": {
     "@capacitor/android": "8.6.0",
     "@capacitor/app": "8.1.2",

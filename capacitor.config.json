@@ -1,6 +1,6 @@
 {
   "appId": "io.github.howknowme.subly",
-  "appName": "Списано",
+  "appName": "Subly",
   "webDir": "www",
   "android": {
     "backgroundColor": "#eef1f6"

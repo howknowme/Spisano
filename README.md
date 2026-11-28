@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/spisano/icon.svg" width="88" height="88" alt="">
+  <img src="icon.svg" width="88" height="88" alt="">
 </p>
 
-<h1 align="center">Списано</h1>
+<h1 align="center">Subly</h1>
 
 <p align="center">
   <b>Подписки и регулярные платежи под контролем.</b><br>
@@ -10,22 +10,22 @@
 </p>
 
 <p align="center">
-  <a href="https://howknowme.github.io/Spisano/app/"><b>Открыть в браузере</b></a>
+  <a href="https://howknowme.github.io/subly/"><b>Открыть в браузере</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk"><b>Скачать для Android (APK)</b></a>
+  <a href="https://github.com/howknowme/subly/releases/latest/download/subly.apk"><b>Скачать для Android (APK)</b></a>
 </p>
 
 <p align="center">
-  <img src="docs/spisano/overview.png" alt="Обзор: расходы в месяц, бюджет, напоминания и прогноз" width="820">
+  <img src="docs/overview.png" alt="Обзор: расходы в месяц, бюджет, напоминания и прогноз" width="820">
 </p>
 
 ## Зачем это
 
 Netflix за 15 $, Яндекс Плюс, облако, мобильная связь, спортзал, ChatGPT… По отдельности это мелочи, но вместе набегают десятки тысяч рублей в год. А пробные периоды тихо превращаются в платные.
 
-«Списано» показывает **реальную сумму**, предупреждает **до списания** и подсказывает, **что можно отменить**.
+Subly показывает **реальную сумму**, предупреждает **до списания** и подсказывает, **что можно отменить**.
 
-Другие трекеры часто требуют аккаунт, доступ к банку или сами продаются по подписке. «Списано» хранит всё только в вашем браузере и ничего никуда не отправляет.
+Другие трекеры часто требуют аккаунт, доступ к банку или сами продаются по подписке. Subly хранит всё только в вашем браузере и ничего никуда не отправляет.
 
 ## Возможности
 
@@ -49,15 +49,15 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 Списания по любому графику: каждые N дней, недель, месяцев или лет. Если подписка оформлена 31-го, в коротких месяцах дата корректно переносится на последний день.
 
 <p align="center">
-  <img src="docs/spisano/phone-overview.png" alt="Обзор на телефоне, тёмная тема" width="240">
+  <img src="docs/phone-overview.png" alt="Обзор на телефоне, тёмная тема" width="240">
   &nbsp;
-  <img src="docs/spisano/phone-list.png" alt="Список подписок" width="240">
+  <img src="docs/phone-list.png" alt="Список подписок" width="240">
   &nbsp;
-  <img src="docs/spisano/phone-form.png" alt="Карточка подписки" width="240">
+  <img src="docs/phone-form.png" alt="Карточка подписки" width="240">
 </p>
 
 <p align="center">
-  <img src="docs/spisano/calendar.png" alt="Календарь списаний" width="820">
+  <img src="docs/calendar.png" alt="Календарь списаний" width="820">
 </p>
 
 ## Приватность
@@ -75,7 +75,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 
 ### Android: приложение (рекомендуется)
 
-1. Скачайте **[subly.apk](https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk)** (все версии в [Releases](https://github.com/howknowme/Spisano/releases)).
+1. Скачайте **[subly.apk](https://github.com/howknowme/subly/releases/latest/download/subly.apk)** (все версии в [Releases](https://github.com/howknowme/subly/releases)).
 2. Откройте файл и разрешите установку из этого источника, когда Android спросит.
 3. Нажмите **Установить**.
 
@@ -88,7 +88,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 
 ### iPhone и любой браузер
 
-Откройте [howknowme.github.io/Spisano/app](https://howknowme.github.io/Spisano/app/):
+Откройте [howknowme.github.io/subly](https://howknowme.github.io/subly/):
 - **iPhone (Safari):** «Поделиться» → «На экран „Домой“».
 - **Android (Chrome):** меню ⋮ → «Установить приложение».
 
@@ -97,7 +97,7 @@ Netflix за 15 $, Яндекс Плюс, облако, мобильная св�
 Чистые HTML, CSS и JavaScript-модули: без фреймворков, без сборки, без зависимостей.
 
 ```bash
-git clone https://github.com/howknowme/Spisano
+git clone https://github.com/howknowme/subly
 cd subly
 npm start          # http://localhost:8080
 npm test           # юнит-тесты логики (node:test)
@@ -135,7 +135,7 @@ APK подписывается ключом `android/app/subly-sideload.keystore
 
 ## Политика конфиденциальности
 
-[howknowme.github.io/Spisano/privacy.html](https://howknowme.github.io/Spisano/privacy.html)
+[howknowme.github.io/subly/privacy.html](https://howknowme.github.io/subly/privacy.html)
 
 ## Лицензия
 

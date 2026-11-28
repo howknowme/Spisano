@@ -1,4 +1,4 @@
-# Публикация «Списано» в магазинах
+# Публикация Subly в магазинах
 
 Всё для карточки приложения лежит в этой папке.
 
@@ -12,9 +12,9 @@
 | `google-play.md` | **Google Play: пошаговая публикация и готовые ответы на анкеты** |
 | `testers.md` | Тексты для поиска 12 тестировщиков (Pikabu, Хабр, Reddit, Telegram) |
 
-Политика конфиденциальности: https://howknowme.github.io/Spisano/privacy.html
+Политика конфиденциальности: https://howknowme.github.io/subly/privacy.html
 
-APK для загрузки: https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk
+APK для загрузки: https://github.com/howknowme/subly/releases/latest/download/subly.apk
 
 ## RuStore: по шагам
 

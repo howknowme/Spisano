@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Списано — трекер подписок</title>
+<title>Subly — трекер подписок</title>
 <meta name="description" content="Трекер подписок и регулярных платежей. Показывает, сколько уходит в месяц, и напоминает за день до списания. Бесплатно, без регистрации и рекламы.">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<meta property="og:title" content="Списано — трекер подписок">
+<meta property="og:title" content="Subly — трекер подписок">
 <meta property="og:description" content="Напоминает о подписке за день до списания. Без регистрации и рекламы.">
-<meta property="og:image" content="https://howknowme.github.io/Spisano/img/og.png">
+<meta property="og:image" content="https://howknowme.github.io/subly/img/og.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preload" href="fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -113,7 +113,7 @@
   .nav-bar { height: 48px; display: flex; align-items: center; gap: 16px; }
   .brand { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 600; font-size: 17px; letter-spacing: -.02em; }
   .brand:hover { text-decoration: none; }
-  .brand svg { width: 22px; height: 22px; }
+  .brand img { width: 22px; height: 22px; border-radius: 5px; }
   .nav-links { display: none; }
   .nav-icons { margin-left: auto; display: flex; align-items: center; gap: 4px; }
   .icon-btn { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: none; color: var(--text); cursor: pointer; opacity: .85; }
@@ -185,8 +185,7 @@
   .card.big h3 { font-size: clamp(28px, 3.2vw, 40px); line-height: 1.1; margin-top: 0; letter-spacing: -.03em; }
   .notes { margin-top: auto; padding-block: 40px 36px; display: grid; gap: 12px; }
   .note { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
-  .note-icon { flex: none; width: 38px; height: 38px; border-radius: 10px; background: #2f46d0; display: grid; place-items: center; }
-  .note-icon svg { width: 22px; height: 22px; }
+  .note-icon { flex: none; width: 38px; height: 38px; border-radius: 10px; overflow: hidden; }
   .note div { flex: 1; min-width: 0; font-size: 15px; line-height: 1.3; }
   .note b { font-weight: 600; }
   .note .when { float: right; color: var(--text-2); font-size: 13px; }
@@ -290,9 +289,9 @@
 <header class="nav" id="nav">
   <div class="wrap">
     <div class="nav-bar">
-      <a class="brand" href="#top" aria-label="Списано, в начало страницы">
-        <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="116" fill="#2f46d0"/><path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="50" stroke-linecap="round"/><circle cx="372" cy="256" r="36" fill="#f2a600"/></svg>
-        Списано
+      <a class="brand" href="#top" aria-label="Subly, в начало страницы">
+        <img src="icon.svg" alt="" width="22" height="22">
+        Subly
       </a>
       <nav aria-label="Разделы">
         <ul class="nav-links">
@@ -303,10 +302,10 @@
         </ul>
       </nav>
       <div class="nav-icons">
-        <a class="icon-btn" href="https://github.com/howknowme/Spisano" aria-label="Исходный код на GitHub">
+        <a class="icon-btn" href="https://github.com/howknowme/subly" aria-label="Исходный код на GitHub">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.330-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.770 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.180a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
         </a>
-        <a class="icon-btn" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk" aria-label="Скачать приложение для Android">
+        <a class="icon-btn" href="https://github.com/howknowme/subly/releases/latest/download/subly.apk" aria-label="Скачать приложение для Android">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>
         </a>
         <button class="icon-btn burger" type="button" aria-expanded="false" aria-controls="menu" aria-label="Открыть меню"><span><span></span><span></span></span></button>
@@ -335,7 +334,7 @@
       <p class="sub">Трекер подписок, который предупреждает раньше банка.</p>
       <div class="ctas">
         <a class="more" href="#features">Узнать больше</a>
-        <a class="more" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать</a>
+        <a class="more" href="https://github.com/howknowme/subly/releases/latest/download/subly.apk">Скачать</a>
       </div>
     </div>
     <!-- Product image: real app screenshots in a phone frame. Swap the src values for your own renders. -->
@@ -368,8 +367,8 @@
           <h3>Напомнит за день. Даже если приложение закрыто.</h3>
           <p>О списании, о счёте за квартиру и о конце пробного периода, пока его ещё можно отменить.</p>
           <div class="notes" aria-hidden="true">
-            <div class="note"><span class="note-icon"><svg viewBox="0 0 512 512"><path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round"/><circle cx="372" cy="256" r="40" fill="#f2a600"/></svg></span><div><span class="when">сейчас</span><b>Завтра спишется 650 ₽</b><br><span class="what">Мобильная связь</span></div></div>
-            <div class="note"><span class="note-icon"><svg viewBox="0 0 512 512"><path d="M326.5 165.5A128 128 0 1 0 326.5 346.5" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round"/><circle cx="372" cy="256" r="40" fill="#f2a600"/></svg></span><div><span class="when">9:00</span><b>Пробный период закончится</b><br><span class="what">Okko, потом 399 ₽ в месяц</span></div></div>
+            <div class="note"><span class="note-icon"><img src="icon.svg" alt="" width="38" height="38"></span><div><span class="when">сейчас</span><b>Завтра спишется 650 ₽</b><br><span class="what">Мобильная связь</span></div></div>
+            <div class="note"><span class="note-icon"><img src="icon.svg" alt="" width="38" height="38"></span><div><span class="when">9:00</span><b>Пробный период закончится</b><br><span class="what">Okko, потом 399 ₽ в месяц</span></div></div>
           </div>
         </article>
         <article class="card" data-reveal>
@@ -455,7 +454,7 @@
           <p class="price">Бесплатно</p>
           <p class="price-note">В любой теме. Без подписки на подписки.</p>
           <div class="ctas" style="margin-top:28px">
-            <a class="btn" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать для Android</a>
+            <a class="btn" href="https://github.com/howknowme/subly/releases/latest/download/subly.apk">Скачать для Android</a>
           </div>
         </div>
       </div>
@@ -477,7 +476,7 @@
     <div class="wrap">
       <h2 class="h-section" id="final-title" data-reveal>Готовы?</h2>
       <div class="ctas" data-reveal>
-        <a class="btn" href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать</a>
+        <a class="btn" href="https://github.com/howknowme/subly/releases/latest/download/subly.apk">Скачать</a>
         <a class="more" href="app/">Открыть в браузере</a>
       </div>
       <p class="from" data-reveal>Бесплатно. Android 7 или новее, или любой браузер.</p>
@@ -493,28 +492,28 @@
       <div>
         <h2>Приложение</h2>
         <ul>
-          <li><a href="https://github.com/howknowme/Spisano/releases/latest/download/spisano.apk">Скачать для Android</a></li>
+          <li><a href="https://github.com/howknowme/subly/releases/latest/download/subly.apk">Скачать для Android</a></li>
           <li><a href="app/">Веб-версия</a></li>
-          <li><a href="https://github.com/howknowme/Spisano/releases">Все версии</a></li>
+          <li><a href="https://github.com/howknowme/subly/releases">Все версии</a></li>
         </ul>
       </div>
       <div>
         <h2>Проект</h2>
         <ul>
-          <li><a href="https://github.com/howknowme/Spisano">Исходный код</a></li>
-          <li><a href="https://github.com/howknowme/Spisano/issues">Сообщить об ошибке</a></li>
+          <li><a href="https://github.com/howknowme/subly">Исходный код</a></li>
+          <li><a href="https://github.com/howknowme/subly/issues">Сообщить об ошибке</a></li>
         </ul>
       </div>
       <div>
         <h2>Документы</h2>
         <ul>
           <li><a href="privacy.html">Конфиденциальность</a></li>
-          <li><a href="https://github.com/howknowme/Spisano/blob/main/LICENSE">Лицензия MIT</a></li>
+          <li><a href="https://github.com/howknowme/subly/blob/main/LICENSE">Лицензия MIT</a></li>
         </ul>
       </div>
     </nav>
     <div class="legal">
-      <span>© 2026 Списано. Открытый код, лицензия MIT.</span>
+      <span>© 2026 Subly. Открытый код, лицензия MIT.</span>
       <span>Все данные хранятся на вашем устройстве.</span>
     </div>
   </div>
